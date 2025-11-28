@@ -1,0 +1,1 @@
+{"id":1761586418393,"timestamp":"2025-10-27T17:33:38.393Z","traps":{"ovi":false,"adulto":false},"location":{"address":"BULNES 351","lat":-34.5084983,"lng":-58.5708489},"description":""}

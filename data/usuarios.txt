@@ -1,0 +1,4 @@
+admin:$2b$10$hMOU6J/H3DRMQZ.YWOFlZO7QgpYU75V0vPw9TN051oTgr7N9wHLkq:admin
+master:$2b$10$ZFlIWEnpKJZM7nK/s1AguOFWhdvTVrWUqug5r/tflh/9Wywkes5GC:master
+Manu:$2b$10$PsqmTiLxRBYOCgoYVlicfuNZI0VRuJofUUThEP9kkz1O1B8xFGJEe:master
+operario:$2b$10$doQg/yEuRo7cn0EyCZpLTOu9VCSlMiCGWVaGHFnP3RCOCkxK7Tk0y:operario-monitor-mosquitos

@@ -1,0 +1,43 @@
+Listado de rutas de carpetas
+El n£mero de serie del volumen es 14B2-3075
+C:.
+³   estructura.txt
+³   globals.css
+³   layout.tsx
+³   loading.tsx
+³   page.tsx
+³   tree.txt
+³   
+ÀÄÄÄapi
+    ³   login.ts
+    ³   
+    ÃÄÄÄcambiar-password
+    ³       route.ts
+    ³       
+    ÃÄÄÄcrear-usuario
+    ³       route.ts
+    ³       
+    ÃÄÄÄguardar-correo
+    ³       route.ts
+    ³       
+    ÃÄÄÄinformes
+    ³       route.ts
+    ³       
+    ÃÄÄÄleer-correo
+    ³       route.ts
+    ³       
+    ÃÄÄÄpermisos
+    ³       route.ts
+    ³       
+    ÃÄÄÄrenombrar-rango
+    ³       route.ts
+    ³       
+    ÃÄÄÄtrampas
+    ³       route.ts
+    ³       
+    ÃÄÄÄupload
+    ³       route.ts
+    ³       
+    ÀÄÄÄvalidar-credenciales
+            route.ts
+            

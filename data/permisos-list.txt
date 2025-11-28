@@ -1,0 +1,14 @@
+
+Clave hide:		Oculta…
+mapa-mapa		Botón y vista del mapa (MapaMapa)
+complementos		Botón de la tuerca (vista de complementos)
+vista-busqueda		Botón de búsqueda (lupa) y su vista
+crear-usuario		Componente CrearUsuario
+agregar-calle		Componente AgregarCalle
+cambiar-password	Componente CambiarPassword (si querés ocultarlo también)
+correo-usuario		Componente CorreoUsuario (si querés ocultarlo también)
+menu-inicio		Botón “Menú” que lleva a MapaMenu
+login			Botón de login/logout
+logo			Logo en el header
+ubicacion-header	Texto “San Isidro, Buenos Aires” en el header
+rol-actual		Texto que muestra el rol actual en VistaComplementos

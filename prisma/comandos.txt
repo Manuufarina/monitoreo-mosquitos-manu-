@@ -1,0 +1,9 @@
+npx prisma migrate dev --name make_email_optional
+http://localhost:5555/
+npx prisma studio <---inicio
+npx prisma generate <--- genera cliente prisma
+npx prisma migrate dev --name add_fecha_json_fields <--- actualiza la base de datos
+npx prisma migrate reset <--- reseta borra los datos de la base de datos 
+
+
+

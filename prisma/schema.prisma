@@ -1,0 +1,52 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite" // después lo cambiamos a postgresql para Vercel
+  url      = env("DATABASE_URL")
+}
+
+model Usuario {
+  id        Int      @id @default(autoincrement())
+  nombre    String
+  email     String?  @unique
+  password  String
+  creadoEn  DateTime @default(now())
+
+  rangoId   Int?
+  rango     Rango?   @relation(fields: [rangoId], references: [id])
+}
+
+model Rango {
+  id        Int      @id @default(autoincrement())
+  nombre    String   @unique
+  reglas    Json?
+  creadoEn  DateTime @default(now())
+
+  usuarios  Usuario[]
+}
+
+model Trampa {
+  id        Int       @id @default(autoincrement())
+  direccion String
+  lat       Float
+  lng       Float
+  creadoEn  DateTime  @default(now())
+
+  informes  Informe[]
+}
+
+model Informe {
+  id         Int      @id @default(autoincrement())
+  fecha      DateTime
+  tipos      Json     // guarda ["ovi","adultos"] como JSON
+  cantidades Json     // { ovi: { Culex: 3 }, adultos: { Aedes: 4 } }
+  notas      String?
+  creadoEn   DateTime @default(now())
+
+  trampaId   Int
+  trampa     Trampa   @relation(fields: [trampaId], references: [id])
+
+  @@unique([trampaId, fecha])   // ✅ evita duplicados en la misma dirección y fecha
+}

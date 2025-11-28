@@ -1,0 +1,27 @@
+Listado de rutas de carpetas
+El n£mero de serie del volumen es 14B2-3075
+C:.
+archivos:
+³   .gitignore
+³   calles si.txt
+³   components.json
+³   console.log(data))
+³   next-env.d.ts
+³   next.config.mjs
+³   package-lock.json
+³   package.json
+³   pnpm-lock.yaml
+³   pnpm-workspace.yaml
+³   postcss.config.mjs
+³   res.json())
+³   tree.txt
+³   tsconfig.json
+carpetas:
+.next
+app
+components
+data
+hook
+lib
+node_modules
+public

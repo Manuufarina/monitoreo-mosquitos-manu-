@@ -1,0 +1,20 @@
+-- CreateTable
+CREATE TABLE "Trampa" (
+    "id" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+    "direccion" TEXT NOT NULL,
+    "lat" REAL NOT NULL,
+    "lng" REAL NOT NULL,
+    "creadoEn" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+-- CreateTable
+CREATE TABLE "Informe" (
+    "id" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+    "semana" TEXT NOT NULL,
+    "tipoTrampa" TEXT NOT NULL,
+    "tipoMosquito" TEXT NOT NULL,
+    "cantidad" INTEGER NOT NULL,
+    "creadoEn" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "trampaId" INTEGER NOT NULL,
+    CONSTRAINT "Informe_trampaId_fkey" FOREIGN KEY ("trampaId") REFERENCES "Trampa" ("id") ON DELETE RESTRICT ON UPDATE CASCADE
+);
