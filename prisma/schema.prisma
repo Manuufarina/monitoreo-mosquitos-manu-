@@ -32,6 +32,7 @@ model Trampa {
   direccion String
   lat       Float
   lng       Float
+  ubicacion String?   // 👈 nuevo campo opcional para descripción de la ubicación
   creadoEn  DateTime  @default(now())
 
   informes  Informe[]

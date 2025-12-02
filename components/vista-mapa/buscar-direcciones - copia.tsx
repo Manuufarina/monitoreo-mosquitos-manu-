@@ -5,8 +5,8 @@ import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { Search, ChevronLeft } from 'lucide-react'
 import { useActualizar } from '@/hooks/useActualizar'
-import { buscarCoordenadas, procesarDireccion } from '@/components/vista-mapa/LogicaDirecciones'
-import { CartelFueraMapa } from '@/components/map-component'
+import { buscarCoordenadas, guardarDireccion } from '@/components/vista-mapa/LogicaDirecciones'
+import { esZonaValida, CartelFueraMapa } from '@/components/map-component'
 
 interface BuscarDireccionesProps {
   onLocationSelect: (lat: number, lng: number, address: string) => void
@@ -47,17 +47,23 @@ export function BuscarDirecciones({
     } else {
       const coords = await buscarCoordenadas(fullAddress)
       if (coords) {
-        // 🚨 Usar helper procesarDireccion para validar y guardar
-        const ok = await procesarDireccion(
-          guardarUbicacion,
-          coords.lat,
-          coords.lng,
-          onLocationSelect,
-          setFueraMapa
+        // 🚨 Reverse geocoding para obtener detalles de address
+        const response = await fetch(
+          `https://nominatim.openstreetmap.org/reverse?format=json&lat=${coords.lat}&lon=${coords.lng}&addressdetails=1`,
+          { headers: { 'Accept-Language': 'es' } }
         )
+        const data = await response.json()
+
+        if (!esZonaValida(data.address)) {
+          setFueraMapa(true)
+          return
+        }
+
+        const ok = await guardarDireccion(guardarUbicacion, fullAddress, coords.lat, coords.lng)
         if (ok) {
           setSelectedLatLng(coords)
-          setSelectedAddress(fullAddress)
+          onLocationSelect(coords.lat, coords.lng, fullAddress)
+          setFueraMapa(false)
         }
       }
     }

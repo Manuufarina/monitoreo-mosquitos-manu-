@@ -171,20 +171,18 @@ export default function Page() {
     return false
   }
 
-  // Guardar ubicación
+  // Guardar ubicación (crear trampa) ✅ corregido
   const handleGuardarUbicacion = async (
     direccion: string,
     lat: number,
     lng: number,
-    traps: { ovi: boolean; adulto: boolean }
+    traps: { ovi: boolean; adulto: boolean },
+    ubicacion?: string
   ) => {
     const res = await fetch('/api/trampas', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        location: { address: direccion, lat, lng },
-        traps,
-      }),
+      body: JSON.stringify({ direccion, lat, lng, traps, ubicacion }), // 👈 ahora correcto
     })
     if (res.ok) {
       await recargarTrampas()
@@ -193,12 +191,26 @@ export default function Page() {
     return false
   }
 
-   // ✅ Actualizar posición ahora manda id
+  // Actualizar posición
   const handleActualizarPosicion = async (id: number, nuevaLat: number, nuevaLng: number) => {
     const res = await fetch('/api/trampas', {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ id, nuevaLat, nuevaLng }),
+    })
+    if (res.ok) {
+      await recargarTrampas()
+      return true
+    }
+    return false
+  }
+
+  // Actualizar descripción
+  const handleActualizarDescripcion = async (id: number, nuevaDescripcion: string) => {
+    const res = await fetch('/api/trampas', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id, nuevaUbicacion: nuevaDescripcion }), // ✅ corregido
     })
     if (res.ok) {
       await recargarTrampas()
@@ -262,7 +274,8 @@ export default function Page() {
           recargarInformes={recargarInformes}
           crearInforme={handleGuardarInforme}
           eliminarInforme={handleEliminarInforme}
-          actualizarPosicion={handleActualizarPosicion}   // ✅ ahora usa id
+          actualizarPosicion={handleActualizarPosicion}
+          actualizarDescripcion={handleActualizarDescripcion} // ✅ ahora correcto
           eliminarPin={handleEliminarPin}
           guardarUbicacion={handleGuardarUbicacion}
           userRol={userRol}

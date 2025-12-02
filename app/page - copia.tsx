@@ -6,8 +6,6 @@ import { Header } from '@/components/header'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { useActualizar } from '@/hooks/useActualizar'
-import { BotonSubirPermisos } from '@/components/BotonSubirPermisos'
-
 
 const MapaMapa = dynamic(() => import('@/components/vista-mapa').then(mod => mod.MapaMapa), {
   ssr: false,
@@ -39,7 +37,7 @@ export default function Page() {
   const [userRol, setUserRol] = useState('')
   const [usuarioActivo, setUsuarioActivo] = useState('')
 
-  const { trampas, informes, recargarTrampas, recargarInformes } = useActualizar()
+  const { trampas, informes, recargarTrampas, recargarInformes, crearInforme, eliminarInforme } = useActualizar()
 
   const cargadoRef = useRef(false)
   useEffect(() => {
@@ -74,7 +72,7 @@ export default function Page() {
 
   const handleLogin = async () => {
     try {
-      const res = await fetch('/api/validar-credenciales', {
+      const res = await fetch('/api/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ usuario: username, password }),
@@ -89,7 +87,7 @@ export default function Page() {
         localStorage.setItem('rol', result.rol || '')
         localStorage.setItem('usuario', result.usuario || '')
       } else {
-        setLoginError('Usuario o contraseña incorrectos')
+        setLoginError(result.error || 'Usuario o contraseña incorrectos')
       }
     } catch (err) {
       console.error('❌ Error al validar credenciales:', err)
@@ -97,48 +95,131 @@ export default function Page() {
     }
   }
 
-  const informesPorDireccion: Record<string, any[]> = {}
+  // Agrupar informes por trampaId
+  const informesPorTrampa: Record<number, any[]> = {}
   for (const inf of informes) {
-    if (!informesPorDireccion[inf.direccion]) informesPorDireccion[inf.direccion] = []
-    informesPorDireccion[inf.direccion].push(inf)
+    if (!informesPorTrampa[inf.trampaId]) informesPorTrampa[inf.trampaId] = []
+    informesPorTrampa[inf.trampaId].push(inf)
   }
 
-  const especiesPorDireccion: Record<string, { Aedes: number; Culex: number; Anopheles: number }> = {}
+  // Especies por trampaId
+  const especiesPorTrampa: Record<number, { Aedes: number; Culex: number; Anopheles: number }> = {}
   for (const inf of informes) {
-    const dir = inf.direccion
-    if (!especiesPorDireccion[dir]) {
-      especiesPorDireccion[dir] = { Aedes: 0, Culex: 0, Anopheles: 0 }
+    const id = inf.trampaId
+    if (!especiesPorTrampa[id]) {
+      especiesPorTrampa[id] = { Aedes: 0, Culex: 0, Anopheles: 0 }
     }
     const cantidades = inf.cantidades || {}
     const ovi = cantidades.ovi || {}
     const adultos = cantidades.adultos || {}
-    especiesPorDireccion[dir].Aedes += parseInt(ovi.Aedes || '0') + parseInt(adultos.Aedes || '0')
-    especiesPorDireccion[dir].Culex += parseInt(ovi.Culex || '0') + parseInt(adultos.Culex || '0')
-    especiesPorDireccion[dir].Anopheles += parseInt(ovi.Anopheles || '0') + parseInt(adultos.Anopheles || '0')
+    especiesPorTrampa[id].Aedes += (ovi.Aedes || 0) + (adultos.Aedes || 0)
+    especiesPorTrampa[id].Culex += (ovi.Culex || 0) + (adultos.Culex || 0)
+    especiesPorTrampa[id].Anopheles += (ovi.Anopheles || 0) + (adultos.Anopheles || 0)
   }
 
   const totalRecords = informes.length
-  const uniqueLocations = new Set(informes.map((d) => d.location?.address)).size
-  const culexCount = informes.filter((d) => d.species === 'culex').length
-  const aedesCount = informes.filter((d) => d.species === 'aedes-aegypti').length
-  const anophelesCount = informes.filter((d) => d.species === 'anopheles').length
+  const uniqueTrampas = new Set(informes.map((d) => d.trampaId)).size
+  const culexCount = Object.values(especiesPorTrampa).reduce((acc, e) => acc + e.Culex, 0)
+  const aedesCount = Object.values(especiesPorTrampa).reduce((acc, e) => acc + e.Aedes, 0)
+  const anophelesCount = Object.values(especiesPorTrampa).reduce((acc, e) => acc + e.Anopheles, 0)
 
-  const speciesCount = informes.reduce((acc, curr) => {
-    acc[curr.species] = (acc[curr.species] || 0) + 1
-    return acc
-  }, {} as Record<string, number>)
-
-  const topSpecies = Object.entries(speciesCount).sort(([, a], [, b]) => b - a)[0]?.[0] || 'N/A'
-  const hasData = informes.length > 0
+  const topSpecies = (() => {
+    const speciesCount: Record<string, number> = {}
+    for (const e of Object.values(especiesPorTrampa)) {
+      speciesCount['Aedes'] = (speciesCount['Aedes'] || 0) + e.Aedes
+      speciesCount['Culex'] = (speciesCount['Culex'] || 0) + e.Culex
+      speciesCount['Anopheles'] = (speciesCount['Anopheles'] || 0) + e.Anopheles
+    }
+    return Object.entries(speciesCount).sort(([, a], [, b]) => b - a)[0]?.[0] || 'N/A'
+  })()
 
   const resumen = {
     totalRecords,
-    uniqueLocations,
+    uniqueTrampas,
     culexCount,
     aedesCount,
     anophelesCount,
     topSpecies,
-    hasData,
+    hasData: informes.length > 0,
+  }
+
+  // Wrappers para props
+  const handleGuardarInforme = async (nuevo: any, informeAnterior?: any) => {
+    const ok = await crearInforme(nuevo, informeAnterior)
+    if (ok) await recargarInformes()
+    return ok
+  }
+
+  const handleEliminarInforme = async (id: number) => {
+    const ok = await eliminarInforme(id)
+    if (ok) await recargarInformes()
+    return ok
+  }
+
+  // Eliminar pin por dirección
+  const handleEliminarPin = async (direccion: string) => {
+    const res = await fetch('/api/trampas', {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ direccion }),
+    })
+    if (res.ok) {
+      await recargarTrampas()
+      await recargarInformes()
+      return true
+    }
+    return false
+  }
+
+  // Guardar ubicación (crear trampa)
+  const handleGuardarUbicacion = async (
+    direccion: string,
+    lat: number,
+    lng: number,
+    traps: { ovi: boolean; adulto: boolean },
+    ubicacion?: string
+  ) => {
+    const res = await fetch('/api/trampas', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        location: { address: direccion, lat, lng, ubicacion },
+        traps,
+      }),
+    })
+    if (res.ok) {
+      await recargarTrampas()
+      return true
+    }
+    return false
+  }
+
+  // Actualizar posición
+  const handleActualizarPosicion = async (id: number, nuevaLat: number, nuevaLng: number) => {
+    const res = await fetch('/api/trampas', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id, nuevaLat, nuevaLng }),
+    })
+    if (res.ok) {
+      await recargarTrampas()
+      return true
+    }
+    return false
+  }
+
+  // ✅ Nuevo: actualizar descripción
+  const handleActualizarDescripcion = async (id: number, nuevaDescripcion: string) => {
+    const res = await fetch('/api/trampas', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id, nuevaDescripcion }),
+    })
+    if (res.ok) {
+      await recargarTrampas()
+      return true
+    }
+    return false
   }
 
   return (
@@ -155,50 +236,64 @@ export default function Page() {
         <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
           <div className="w-full max-w-md bg-white rounded-lg shadow-lg p-6 space-y-4">
             <h2 className="text-lg font-semibold">Iniciar sesión</h2>
-            <Input placeholder="Usuario" value={username} onChange={(e) => setUsername(e.target.value)} />
-            <Input type="password" placeholder="Contraseña" value={password} onChange={(e) => setPassword(e.target.value)} />
+            <Input
+              placeholder="Usuario"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+            />
+            <Input
+              type="password"
+              placeholder="Contraseña"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+            />
             {loginError && <p className="text-sm text-red-600">{loginError}</p>}
             <div className="flex justify-end gap-2">
-              <Button variant="outline" onClick={() => setShowLoginForm(false)}>Cancelar</Button>
+              <Button variant="outline" onClick={() => setShowLoginForm(false)}>
+                Cancelar
+              </Button>
               <Button onClick={handleLogin}>Ingresar</Button>
             </div>
           </div>
         </div>
       )}
 
-      <main className="container mx-auto px-4 py-6">
-        {/* ✅ Botón para subir permisos.json */}
-        <div className="mb-6">
-          <BotonSubirPermisos />
-        </div>
+      {currentView === 'inicio' ? (
+        <MapaMenu
+          trampas={trampas}
+          informesPorTrampa={informesPorTrampa}
+          especiesPorTrampa={especiesPorTrampa}
+          recargarTrampas={recargarTrampas}
+          recargarInformes={recargarInformes}
+          userRol={userRol}
+          resumen={resumen}
+        />
+      ) : currentView === 'mapa' && isLoggedIn ? (
+        <MapaMapa
+          trampas={trampas}
+          informesPorTrampa={informesPorTrampa}
+          especiesPorTrampa={especiesPorTrampa}
+          recargarTrampas={recargarTrampas}
+          recargarInformes={recargarInformes}
+          crearInforme={handleGuardarInforme}
+          eliminarInforme={handleEliminarInforme}
+          actualizarPosicion={handleActualizarPosicion}   // ✅ ahora usa id
+          actualizarDescripcion={handleActualizarDescripcion} // ✅ nuevo handler
+          eliminarPin={handleEliminarPin}
+          guardarUbicacion={handleGuardarUbicacion}
+          userRol={userRol}
+        />
+      ) : currentView === 'vista-busqueda' ? (
+        <VistaBusqueda />
+      ) : null}
 
-        {currentView === 'inicio' ? (
-          <MapaMenu
-            trampas={trampas}
-            informesPorDireccion={informesPorDireccion}
-            especiesPorDireccion={especiesPorDireccion}
-            recargarTrampas={recargarTrampas}
-            recargarInformes={recargarInformes}
-            userRol={userRol}
-            resumen={resumen}
-          />
-        ) : currentView === 'mapa' && isLoggedIn ? (
-          <MapaMapa
-            trampas={trampas}
-            informesPorDireccion={informesPorDireccion}
-            especiesPorDireccion={especiesPorDireccion}
-            recargarTrampas={recargarTrampas}
-            recargarInformes={recargarInformes}
-            userRol={userRol}
-          />
-        ) : currentView === 'vista-busqueda' ? (
-          <VistaBusqueda />
-        ) : null}
-
-        <div hidden={currentView !== 'vista-complementos' || !isLoggedIn}>
-          <VistaComplementos userRol={userRol} isLoggedIn={isLoggedIn} usuario={usuarioActivo} />
-        </div>
-      </main>
+      <div hidden={currentView !== 'vista-complementos' || !isLoggedIn}>
+        <VistaComplementos
+          userRol={userRol}
+          isLoggedIn={isLoggedIn}
+          usuario={usuarioActivo}
+        />
+      </div>
     </div>
   )
 }

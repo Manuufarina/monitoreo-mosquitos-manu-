@@ -23,12 +23,15 @@ interface ActualizarContextType {
     direccion: string,
     lat: number,
     lng: number,
-    traps: { ovi: boolean; adulto: boolean }
+    traps: { ovi: boolean; adulto: boolean },
+    ubicacion?: string
   ) => Promise<boolean>
   crearInforme: (nuevo: Informe, informeAnterior?: Informe) => Promise<boolean>
   eliminarInforme: (id: number) => Promise<boolean>
   eliminarPin: (direccion: string) => Promise<boolean>
   actualizarPosicion: (trampaId: number, nuevaLat: number, nuevaLng: number) => Promise<boolean>
+  selectedTrampa: any | null
+  setSelectedTrampa: (trampa: any | null) => void
 }
 
 export const ActualizarContext = createContext<ActualizarContextType | undefined>(undefined)
@@ -36,6 +39,7 @@ export const ActualizarContext = createContext<ActualizarContextType | undefined
 export function ActualizarProvider({ children }: { children: React.ReactNode }) {
   const [trampas, setTrampas] = useState<any[]>([])
   const [informes, setInformes] = useState<Informe[]>([])
+  const [selectedTrampa, setSelectedTrampa] = useState<any | null>(null)
 
   const recargarTrampas = async () => {
     try {
@@ -51,6 +55,7 @@ export function ActualizarProvider({ children }: { children: React.ReactNode }) 
             lat: Number(t.lat),
             lng: Number(t.lng),
           },
+          ubicacion: t.ubicacion ?? "", // ✅ usamos el campo real de la base
           traps: { ovi: t.ovi ?? false, adulto: t.adulto ?? false },
         }))
       )
@@ -81,13 +86,15 @@ export function ActualizarProvider({ children }: { children: React.ReactNode }) 
     direccion: string,
     lat: number,
     lng: number,
-    traps: { ovi: boolean; adulto: boolean }
+    traps: { ovi: boolean; adulto: boolean },
+    ubicacion?: string
   ): Promise<boolean> => {
     try {
       const res = await fetch('/api/trampas', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ location: { address: direccion, lat, lng }, traps }),
+        // ✅ mandamos ubicacion directamente, no dentro de location
+        body: JSON.stringify({ direccion, lat, lng, traps, ubicacion }),
       })
       const result = await res.json()
       if (result.success) {
@@ -174,7 +181,8 @@ export function ActualizarProvider({ children }: { children: React.ReactNode }) 
       const res = await fetch('/api/trampas', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ trampaId, nuevaLat, nuevaLng }),
+        // ✅ usamos id, no trampaId
+        body: JSON.stringify({ id: trampaId, nuevaLat, nuevaLng }),
       })
       const result = await res.json()
       if (result.success) {
@@ -199,6 +207,8 @@ export function ActualizarProvider({ children }: { children: React.ReactNode }) 
         eliminarInforme,
         eliminarPin,
         actualizarPosicion,
+        selectedTrampa,
+        setSelectedTrampa,
       }}
     >
       {children}

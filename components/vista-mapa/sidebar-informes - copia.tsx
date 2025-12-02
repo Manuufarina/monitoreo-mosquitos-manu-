@@ -20,6 +20,7 @@ interface Informe {
 }
 
 interface SidebarInformesProps {
+  trampaId: number            // ✅ nuevo prop
   direccion: string
   lat: number
   lng: number
@@ -40,6 +41,7 @@ interface SidebarInformesProps {
 }
 
 export function SidebarInformes({
+  trampaId,                     // ✅ recibido desde MapaMapa
   direccion,
   lat,
   lng,
@@ -101,6 +103,31 @@ export function SidebarInformes({
     setConfirmarPin(false)
   }
 
+  // ✅ Nuevo: guardar dirección en la base con id
+  const handleConfirmarDireccion = async () => {
+    if (editandoDireccion) {
+      try {
+        const res = await fetch('/api/trampas', {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            id: trampaId,                   // ✅ ahora usamos el id de la trampa
+            nuevaDireccion: direccionEditable,
+          }),
+        })
+        if (res.ok) {
+          alert('✅ Dirección actualizada en la base')
+        } else {
+          alert('❌ No se pudo actualizar la dirección')
+        }
+      } catch (err) {
+        console.error('Error al actualizar dirección:', err)
+        alert('❌ Error al conectar con el servidor')
+      }
+    }
+    setEditandoDireccion(!editandoDireccion)
+  }
+
   return (
     <div className="bg-white rounded-lg shadow-md p-4 space-y-4 relative">
       <div className="absolute top-2 right-2">
@@ -117,7 +144,6 @@ export function SidebarInformes({
       <div className="space-y-1 pt-6">
         <div className="flex items-center justify-between">
           <Label className="text-sm font-medium">Dirección</Label>
-          {/* ✅ Botón rojo de eliminar pin aparece si no hay informes */}
           {informesFiltrados.length === 0 && (
             <Button
               variant="ghost"
@@ -146,12 +172,13 @@ export function SidebarInformes({
           variant="outline"
           size="sm"
           className="mt-2 flex items-center gap-2"
-          onClick={() => setEditandoDireccion(!editandoDireccion)}
+          onClick={handleConfirmarDireccion}
         >
           <Edit3 className="w-4 h-4" />
           {editandoDireccion ? 'Confirmar dirección' : 'Modificar dirección'}
         </Button>
       </div>
+
 
       {/* Botones de tipo de trampa */}
       <div className="space-y-1">

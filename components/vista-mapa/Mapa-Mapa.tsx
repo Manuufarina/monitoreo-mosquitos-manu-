@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import dynamic from 'next/dynamic'
 import { ChevronRight } from 'lucide-react'
 import { BuscarDirecciones } from '@/components/vista-mapa/buscar-direcciones'
@@ -40,7 +40,8 @@ interface MapaMapaProps {
     direccion: string,
     lat: number,
     lng: number,
-    traps: { ovi: boolean; adulto: boolean }
+    traps: { ovi: boolean; adulto: boolean },
+    ubicacion?: string
   ) => Promise<boolean>
   actualizarPosicion: (id: number, nuevaLat: number, nuevaLng: number) => Promise<boolean>
 }
@@ -68,7 +69,7 @@ export function MapaMapa({
 
   const mosquitoData = trampas
 
-  const [selectedLocation, setSelectedLocation] = useState<{ address: string; lat: number; lng: number } | null>(null)
+  const [selectedLocation, setSelectedLocation] = useState<{ address: string; lat: number; lng: number; ubicacion?: string } | null>(null)
   const [selectedTrampa, setSelectedTrampa] = useState<any | null>(null)
   const [tipoSeleccionado, setTipoSeleccionado] = useState<'ovi' | 'adultos' | null>(null)
   const [showFormulario, setShowFormulario] = useState(false)
@@ -79,33 +80,6 @@ export function MapaMapa({
   const [posicionEditada, setPosicionEditada] = useState<{ lat: number; lng: number } | null>(null)
 
   const [reverseActive, setReverseActive] = useState(true)
-
-  useEffect(() => {
-    if (!modoEdicionPin && posicionEditada && selectedTrampa?.id) {
-      const guardarNuevaPosicion = async () => {
-        const ok = await actualizarPosicion(
-          selectedTrampa.id,              // ✅ ahora se pasa el id
-          posicionEditada.lat,
-          posicionEditada.lng
-        )
-        if (ok) {
-          setSelectedTrampa((prev: any) => ({
-            ...prev,
-            location: {
-              ...prev.location,
-              lat: posicionEditada.lat,
-              lng: posicionEditada.lng,
-            },
-          }))
-          setPosicionEditada(null)
-          await recargarTrampas()
-        } else {
-          alert('❌ No se pudo guardar la nueva posición.')
-        }
-      }
-      guardarNuevaPosicion()
-    }
-  }, [modoEdicionPin])
 
   const maximizarMenuBusqueda = () => {
     setMenuBusquedaMinimizado(false)
@@ -125,11 +99,19 @@ export function MapaMapa({
     const fallbackTrampa = {
       id: id ?? 0,
       location: { address, lat, lng },
+      ubicacion: null,
       traps: { ovi: false, adulto: false },
     }
 
-    setSelectedTrampa(match || fallbackTrampa)
-    setSelectedLocation({ address, lat, lng })
+    const trampa = match || fallbackTrampa
+
+    setSelectedTrampa(trampa)
+    setSelectedLocation({
+      address: trampa.location.address,
+      lat: trampa.location.lat,
+      lng: trampa.location.lng,
+      ubicacion: trampa.ubicacion ?? null, // ✅ ahora correcto
+    })
     setShowFormulario(false)
     setInformeEditando(null)
     maximizarSidebar()
@@ -160,7 +142,12 @@ export function MapaMapa({
   return (
     <div className="relative h-[calc(100vh-120px)] overflow-visible z-0">
       <div className="absolute top-4 left-4 z-[1000]">
-        <BotonReverse reverseActive={reverseActive} onToggle={setReverseActive} />
+        <BotonReverse
+          reverseActive={reverseActive}
+          onToggle={setReverseActive}
+          guardarUbicacion={guardarUbicacion}
+          selectedLocation={selectedLocation}
+        />
       </div>
 
       <MapComponent
@@ -171,6 +158,7 @@ export function MapaMapa({
         modoEdicionPin={modoEdicionPin}
         posicionEditada={posicionEditada}
         setPosicionEditada={setPosicionEditada}
+        guardarUbicacion={guardarUbicacion}
       />
 
       {!menuBusquedaMinimizado && !shouldHideElemento(userRol, 'buscar-direcciones') && (
@@ -190,7 +178,7 @@ export function MapaMapa({
       {selectedTrampa && !showFormulario && !sidebarMinimizado && !shouldHideElemento(userRol, 'sidebar-informes') && (
         <div className="absolute top-4 right-4 z-[100] w-80">
           <SidebarInformes
-            trampaId={selectedTrampa.id}                 // ✅ ahora pasamos el id
+            trampaId={selectedTrampa.id}
             direccion={selectedTrampa.location.address}
             lat={selectedTrampa.location.lat}
             lng={selectedTrampa.location.lng}
@@ -221,11 +209,12 @@ export function MapaMapa({
             onMinimizar={() => setSidebarMinimizado(true)}
             modoEdicionPin={modoEdicionPin}
             setModoEdicionPin={setModoEdicionPin}
+            ubicacion={selectedTrampa.ubicacion}   // ✅ agregado
           />
         </div>
       )}
 
-      {!showFormulario && menuBusquedaMinimizado && sidebarMinimizado && (
+       {!showFormulario && menuBusquedaMinimizado && sidebarMinimizado && (
         <div className="absolute top-4 right-4 z-[100] flex flex-col gap-3 items-end">
           {!shouldHideElemento(userRol, 'buscar-direcciones') && (
             <Button

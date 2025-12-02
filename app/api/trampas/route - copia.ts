@@ -19,10 +19,10 @@ export async function GET() {
 export async function POST(req: Request) {
   try {
     const body = await req.json()
-    const address = body.direccion?.trim().toLowerCase()
-    const lat = body.lat
-    const lng = body.lng
-    const ubicacion = body.ubicacion?.trim() || null
+    const address = body.location?.address?.trim().toLowerCase()
+    const lat = body.location?.lat
+    const lng = body.location?.lng
+    const ubicacion = body.location?.ubicacion?.trim() || null
 
     if (!address || typeof lat !== 'number' || typeof lng !== 'number') {
       return NextResponse.json({ error: 'Faltan datos válidos' }, { status: 400 })
@@ -63,7 +63,7 @@ export async function DELETE(req: Request) {
   }
 }
 
-// PATCH: actualizar lat/lng, dirección o ubicacion de una trampa
+// PATCH: actualizar ubicación, dirección o descripción de una trampa
 export async function PATCH(req: Request) {
   try {
     const body = await req.json()
@@ -71,7 +71,7 @@ export async function PATCH(req: Request) {
     const nuevaLat = body.nuevaLat
     const nuevaLng = body.nuevaLng
     const nuevaDireccion = body.nuevaDireccion?.trim().toLowerCase()
-    const nuevaUbicacion = body.nuevaUbicacion?.trim()
+    const nuevaDescripcion = body.nuevaDescripcion?.trim()
 
     if (!id) {
       return NextResponse.json({ error: 'Falta id de la trampa' }, { status: 400 })
@@ -85,8 +85,8 @@ export async function PATCH(req: Request) {
     if (nuevaDireccion) {
       data.direccion = nuevaDireccion
     }
-    if (nuevaUbicacion) {
-      data.ubicacion = nuevaUbicacion
+    if (nuevaDescripcion) {
+      data.ubicacion = nuevaDescripcion
     }
 
     if (Object.keys(data).length === 0) {

@@ -1,24 +1,37 @@
-// prisma/seed.ts
 import { PrismaClient } from '@prisma/client'
 const prisma = new PrismaClient()
 
 async function main() {
-  await prisma.usuario.upsert({
-    where: { email: 'damianholasekcosta@gmail.com' }, // tu email oficial
+  console.log("🚀 Entrando a seed...")
+
+  // Creamos rango admin si no existe
+  const rangoAdmin = await prisma.rango.upsert({
+    where: { nombre: 'admin' },
     update: {},
     create: {
-      nombre: 'DAHolasekCosta',                       // tu nombre
-      email: 'damianholasekcosta@gmail.com',           // tu email oficial
-      password: 'naimad',           // tu contraseña (en producción usaríamos hash)
-      permisos: 'admin',                      // rol o permisos
+      nombre: 'admin',
+      reglas: { acceso: 'total' },
     },
   })
-  console.log('✅ Usuario oficial creado')
+
+  // Creamos usuario admin asociado al rango
+  const usuarioAdmin = await prisma.usuario.upsert({
+    where: { email: 'damianholasekcosta@gmail.com' },
+    update: {},
+    create: {
+      nombre: 'DAHolasekCosta',
+      email: 'damianholasekcosta@gmail.com',
+      password: 'naimad',
+      rangoId: rangoAdmin.id,
+    },
+  })
+
+  console.log('✅ Usuario oficial creado con rango admin:', usuarioAdmin)
 }
 
 main()
   .catch((e) => {
-    console.error(e)
+    console.error("❌ Error en seed:", e)
     process.exit(1)
   })
   .finally(async () => {

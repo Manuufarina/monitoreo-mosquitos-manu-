@@ -11,16 +11,61 @@ import 'leaflet/dist/leaflet.css'
 import L from 'leaflet'
 import { useEffect, useState } from 'react'
 import { CameraFlyTo } from '@/components/CameraFlyTo'
+import React from 'react'
+
+/* 🔎 Zonas permitidas en San Isidro */
+const zonasPermitidas = [
+  'san isidro',
+  'beccar',
+  'villa adelina',
+  'boulogne',
+  'martinez',
+  'acassuso',
+]
+
+export const esZonaValida = (address: any) => {
+  const suburb = address?.suburb?.toLowerCase() || ''
+  const city = address?.city?.toLowerCase() || ''
+  const town = address?.town?.toLowerCase() || ''
+  const village = address?.village?.toLowerCase() || ''
+  const county = address?.county?.toLowerCase() || ''
+  const stateDistrict = address?.state_district?.toLowerCase() || ''
+
+  return zonasPermitidas.some(zona =>
+    suburb.includes(zona) ||
+    city.includes(zona) ||
+    town.includes(zona) ||
+    village.includes(zona) ||
+    county.includes(zona) ||
+    stateDistrict.includes(zona)
+  )
+}
+
+export const CartelFueraMapa: React.FC = () => {
+  return (
+    <div className="fixed top-4 right-4 z-[2000] bg-red-600 text-white px-4 py-2 rounded shadow-lg">
+      ⚠️ Dirección fuera del municipio<br />
+      No se guardó en la base
+    </div>
+  )
+}
 
 interface MapComponentProps {
-  selectedLocation: { address: string; lat: number; lng: number } | null
+  selectedLocation: { address: string; lat: number; lng: number; ubicacion?: string } | null
   mosquitoData: any[]
-  informesPorDireccion: Record<string, any[]>
+  informesPorDireccion?: Record<string, any[]>
   onLocationSelect?: (lat: number, lng: number, address: string, id?: number) => void
+  guardarUbicacion?: (
+    direccion: string,
+    lat: number,
+    lng: number,
+    traps: { ovi: boolean; adulto: boolean },
+    ubicacion?: string
+  ) => Promise<boolean>
   modoEdicionPin?: boolean
   posicionEditada?: { lat: number; lng: number } | null
   setPosicionEditada?: (pos: { lat: number; lng: number }) => void
-  reverseActive: boolean   // 👈 estado del BotonReverse
+  reverseActive: boolean
 }
 
 export function MapComponent({
@@ -28,12 +73,14 @@ export function MapComponent({
   mosquitoData = [],
   informesPorDireccion,
   onLocationSelect,
+  guardarUbicacion,
   modoEdicionPin = false,
   posicionEditada,
   setPosicionEditada,
   reverseActive,
 }: MapComponentProps) {
   const [tempPin, setTempPin] = useState<{ lat: number; lng: number; address: string } | null>(null)
+  const [fueraMapa, setFueraMapa] = useState(false)
 
   useEffect(() => {
     delete L.Icon.Default.prototype._getIconUrl
@@ -44,9 +91,10 @@ export function MapComponent({
     })
   }, [])
 
-  const center = selectedLocation
-    ? [selectedLocation.lat, selectedLocation.lng]
-    : [-34.471, -58.537] // San Isidro por defecto
+  const center =
+    selectedLocation && typeof selectedLocation.lat === 'number' && typeof selectedLocation.lng === 'number'
+      ? [selectedLocation.lat, selectedLocation.lng]
+      : [-34.471, -58.537] // fallback San Isidro
 
   // 👇 ClickHandler que usa reverseActive
   function ClickHandler() {
@@ -54,10 +102,8 @@ export function MapComponent({
       click: async (e) => {
         const { lat, lng } = e.latlng
         if (reverseActive) {
-          // 🔵 modo zoom
           e.target.setView([lat, lng], 18)
         } else {
-          // 🔴 modo pin azul
           setTempPin({ lat, lng, address: 'Buscando dirección...' })
           try {
             const res = await fetch(
@@ -65,15 +111,32 @@ export function MapComponent({
               { headers: { 'Accept-Language': 'es' } }
             )
             const data = await res.json()
+            const addressObj = data.address
+
+            if (!addressObj || !esZonaValida(addressObj)) {
+              setTempPin({ lat, lng, address: '⚠️ Dirección fuera del municipio' })
+              setFueraMapa(true)
+              return
+            }
+
             const street =
-              data.address?.road ||
-              data.address?.pedestrian ||
-              data.address?.street ||
+              addressObj.road ||
+              addressObj.pedestrian ||
+              addressObj.street ||
               'Calle desconocida'
-            const number = data.address?.house_number || 'S/N'
-            const address = `${street} ${number}`
-            setTempPin({ lat, lng, address })
-            if (onLocationSelect) onLocationSelect(lat, lng, address, 0) // 👈 id=0 para nuevas
+            const number = addressObj.house_number || 'S/N'
+            const fullAddress = `${street} ${number}, ${addressObj.suburb || addressObj.city || ''}`
+
+            setTempPin({ lat, lng, address: fullAddress })
+            setFueraMapa(false)
+
+            // ✅ Seleccionamos ubicación
+            if (onLocationSelect) onLocationSelect(lat, lng, fullAddress, 0)
+
+            // ✅ Creamos trampa en base igual que BuscarDirecciones
+            if (guardarUbicacion) {
+              await guardarUbicacion(fullAddress, lat, lng, { ovi: false, adulto: false }, "")
+            }
           } catch (err) {
             console.error('Error en reverse geocoding:', err)
             setTempPin({ lat, lng, address: 'Error al obtener dirección' })
@@ -85,99 +148,108 @@ export function MapComponent({
   }
 
   return (
-    <LeafletMap
-      center={center}
-      zoom={13}
-      style={{ height: '100%', width: '100%' }}
-      zoomControl={false}
-      scrollWheelZoom={true}
-      doubleClickZoom={true}
-      touchZoom={true}
-    >
-      <TileLayer
-        url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-        attribution="&copy; OpenStreetMap contributors"
-      />
+    <>
+      <LeafletMap
+        center={center}
+        zoom={13}
+        style={{ height: '100%', width: '100%' }}
+        zoomControl={false}
+        scrollWheelZoom={true}
+        doubleClickZoom={true}
+        touchZoom={true}
+      >
+        <TileLayer
+          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+          attribution="&copy; OpenStreetMap contributors"
+        />
 
-      <ClickHandler />
+        <ClickHandler />
 
-      {/* 👇 Pin azul persistente para selectedLocation */}
-      {selectedLocation && (
-        <>
-          <CameraFlyTo
-            key={`${selectedLocation.lat}-${selectedLocation.lng}`}
-            position={[selectedLocation.lat, selectedLocation.lng]}
-          />
-          <Marker
-            position={
-              posicionEditada
-                ? [posicionEditada.lat, posicionEditada.lng]
-                : [selectedLocation.lat, selectedLocation.lng]
-            }
-            draggable={modoEdicionPin}
-            eventHandlers={{
-              dragend: (e) => {
-                const marker = e.target
-                const pos = marker.getLatLng()
-                if (setPosicionEditada) {
-                  setPosicionEditada({ lat: pos.lat, lng: pos.lng })
+        {/* 👇 Pin azul persistente */}
+        {selectedLocation &&
+          typeof selectedLocation.lat === 'number' &&
+          typeof selectedLocation.lng === 'number' && (
+            <>
+              <CameraFlyTo
+                key={`${selectedLocation.lat}-${selectedLocation.lng}`}
+                position={[selectedLocation.lat, selectedLocation.lng]}
+              />
+              <Marker
+                position={
+                  posicionEditada &&
+                  typeof posicionEditada.lat === 'number' &&
+                  typeof posicionEditada.lng === 'number'
+                    ? [posicionEditada.lat, posicionEditada.lng]
+                    : [selectedLocation.lat, selectedLocation.lng]
                 }
-              },
-            }}
-          >
-            <Popup>
-              <strong>{selectedLocation.address}</strong>
-              <br />
-              Lat: {(posicionEditada?.lat ?? selectedLocation.lat).toFixed(4)},
-              Lng: {(posicionEditada?.lng ?? selectedLocation.lng).toFixed(4)}
-            </Popup>
-          </Marker>
-        </>
-      )}
+                draggable={modoEdicionPin}
+                eventHandlers={{
+                  dragend: (e) => {
+                    const marker = e.target
+                    const pos = marker.getLatLng()
+                    if (setPosicionEditada) {
+                      setPosicionEditada({ lat: pos.lat, lng: pos.lng })
+                    }
+                  },
+                }}
+              >
+                <Popup>
+                  <strong>{selectedLocation.address}</strong>
+                  <br />
+                  {selectedLocation.ubicacion ?? 'Sin descripción'}
+                </Popup>
+              </Marker>
+            </>
+          )}
 
-      {/* 👇 Pin temporal cuando se hace click en modo pin azul */}
-      {tempPin && (
-        <Marker position={[tempPin.lat, tempPin.lng]}>
-          <Popup>
-            <strong style={{ color: '#2563eb' }}>{tempPin.address}</strong>
-            <br />
-            Lat: {tempPin.lat.toFixed(4)}, Lng: {tempPin.lng.toFixed(4)}
-          </Popup>
-        </Marker>
-      )}
-
-      {/* 👇 Renderizado de trampas desde la base */}
-      {Array.isArray(mosquitoData) &&
-        mosquitoData.map((entry, index) => {
-          const location = entry.location
-          const lat = location?.lat
-          const lng = location?.lng
-          const address = location?.address ?? 'Sin dirección'
-          const cantidad = (informesPorDireccion?.[address]?.length) ?? 0
-
-          if (typeof lat !== 'number' || typeof lng !== 'number') return null
-
-          return (
-            <Marker
-              key={entry.id ?? index}
-              position={[lat, lng]}
-              title={`${address}\n${cantidad} informe${cantidad !== 1 ? 's' : ''}`}
-              eventHandlers={{
-                click: () => {
-                  if (onLocationSelect) {
-                    onLocationSelect(lat, lng, address, entry.id) // ✅ ahora pasa id
-                  }
-                },
-              }}
-            >
+        {/* 👇 Pin temporal */}
+        {tempPin &&
+          typeof tempPin.lat === 'number' &&
+          typeof tempPin.lng === 'number' && (
+            <Marker position={[tempPin.lat, tempPin.lng]}>
               <Popup>
-                <strong>{address}</strong>
+                <strong style={{ color: '#2563eb' }}>{tempPin.address}</strong>
                 <br />
-                {cantidad} informe{cantidad !== 1 ? 's' : ''}
+                Sin descripción
               </Popup>
             </Marker>
-          )
-        })}
-    </LeafletMap>
+          )}
+
+        {/* 👇 Renderizado de trampas */}
+        {Array.isArray(mosquitoData) &&
+          mosquitoData.map((entry, index) => {
+            const location = entry.location
+            const lat = location?.lat
+            const lng = location?.lng
+            const address = location?.address ?? 'Sin dirección'
+            const ubicacion = entry.ubicacion ?? location?.ubicacion ?? 'Sin descripción'
+
+            if (typeof lat !== 'number' || typeof lng !== 'number') return null
+
+            return (
+              <Marker
+                key={entry.id ?? index}
+                position={[lat, lng]}
+                title={`${address}\n${ubicacion}`}
+                eventHandlers={{
+                  click: () => {
+                    if (onLocationSelect) {
+                      onLocationSelect(lat, lng, address, entry.id)
+                    }
+                  },
+                }}
+              >
+                <Popup>
+                  <strong>{address}</strong>
+                  <br />
+                  {ubicacion}
+                </Popup>
+              </Marker>
+            )
+          })}
+      </LeafletMap>
+
+      {fueraMapa && <CartelFueraMapa />}
+    </>
   )
 }
