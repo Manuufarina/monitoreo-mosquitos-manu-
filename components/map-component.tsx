@@ -66,6 +66,7 @@ interface MapComponentProps {
   posicionEditada?: { lat: number; lng: number } | null
   setPosicionEditada?: (pos: { lat: number; lng: number }) => void
   reverseActive: boolean
+  flyToRequest?: { lat: number; lng: number } | null   // 👈 nueva prop
 }
 
 export function MapComponent({
@@ -78,6 +79,7 @@ export function MapComponent({
   posicionEditada,
   setPosicionEditada,
   reverseActive,
+  flyToRequest,
 }: MapComponentProps) {
   const [tempPin, setTempPin] = useState<{ lat: number; lng: number; address: string } | null>(null)
   const [fueraMapa, setFueraMapa] = useState(false)
@@ -91,12 +93,9 @@ export function MapComponent({
     })
   }, [])
 
-  const center =
-    selectedLocation && typeof selectedLocation.lat === 'number' && typeof selectedLocation.lng === 'number'
-      ? [selectedLocation.lat, selectedLocation.lng]
-      : [-34.471, -58.537] // fallback San Isidro
+  // ✅ Center fijo: no depende de selectedLocation
+  const center: [number, number] = [-34.471, -58.537]
 
-  // 👇 ClickHandler que usa reverseActive
   function ClickHandler() {
     useMapEvents({
       click: async (e) => {
@@ -130,10 +129,8 @@ export function MapComponent({
             setTempPin({ lat, lng, address: fullAddress })
             setFueraMapa(false)
 
-            // ✅ Seleccionamos ubicación
             if (onLocationSelect) onLocationSelect(lat, lng, fullAddress, 0)
 
-            // ✅ Creamos trampa en base igual que BuscarDirecciones
             if (guardarUbicacion) {
               await guardarUbicacion(fullAddress, lat, lng, { ovi: false, adulto: false }, "")
             }
@@ -165,55 +162,53 @@ export function MapComponent({
 
         <ClickHandler />
 
+        {/* 👇 FlyTo directo si hay pedido */}
+        {flyToRequest && (
+          <CameraFlyTo
+            key={`${flyToRequest.lat}-${flyToRequest.lng}`}
+            position={[flyToRequest.lat, flyToRequest.lng]}
+          />
+        )}
+
         {/* 👇 Pin azul persistente */}
         {selectedLocation &&
           typeof selectedLocation.lat === 'number' &&
           typeof selectedLocation.lng === 'number' && (
-            <>
-              <CameraFlyTo
-                key={`${selectedLocation.lat}-${selectedLocation.lng}`}
-                position={[selectedLocation.lat, selectedLocation.lng]}
-              />
-              <Marker
-                position={
-                  posicionEditada &&
-                  typeof posicionEditada.lat === 'number' &&
-                  typeof posicionEditada.lng === 'number'
-                    ? [posicionEditada.lat, posicionEditada.lng]
-                    : [selectedLocation.lat, selectedLocation.lng]
-                }
-                draggable={modoEdicionPin}
-                eventHandlers={{
-                  dragend: (e) => {
-                    const marker = e.target
-                    const pos = marker.getLatLng()
-                    if (setPosicionEditada) {
-                      setPosicionEditada({ lat: pos.lat, lng: pos.lng })
-                    }
-                  },
-                }}
-              >
-                <Popup>
-                  <strong>{selectedLocation.address}</strong>
-                  <br />
-                  {selectedLocation.ubicacion ?? 'Sin descripción'}
-                </Popup>
-              </Marker>
-            </>
-          )}
-
-        {/* 👇 Pin temporal */}
-        {tempPin &&
-          typeof tempPin.lat === 'number' &&
-          typeof tempPin.lng === 'number' && (
-            <Marker position={[tempPin.lat, tempPin.lng]}>
+            <Marker
+              position={
+                posicionEditada
+                  ? [posicionEditada.lat, posicionEditada.lng]
+                  : [selectedLocation.lat, selectedLocation.lng]
+              }
+              draggable={modoEdicionPin}
+              eventHandlers={{
+                dragend: (e) => {
+                  const marker = e.target
+                  const pos = marker.getLatLng()
+                  if (setPosicionEditada) {
+                    setPosicionEditada({ lat: pos.lat, lng: pos.lng })
+                  }
+                },
+              }}
+            >
               <Popup>
-                <strong style={{ color: '#2563eb' }}>{tempPin.address}</strong>
+                <strong>{selectedLocation.address}</strong>
                 <br />
-                Sin descripción
+                {selectedLocation.ubicacion ?? 'Sin descripción'}
               </Popup>
             </Marker>
           )}
+
+        {/* 👇 Pin temporal */}
+        {tempPin && (
+          <Marker position={[tempPin.lat, tempPin.lng]}>
+            <Popup>
+              <strong style={{ color: '#2563eb' }}>{tempPin.address}</strong>
+              <br />
+              Sin descripción
+            </Popup>
+          </Marker>
+        )}
 
         {/* 👇 Renderizado de trampas */}
         {Array.isArray(mosquitoData) &&

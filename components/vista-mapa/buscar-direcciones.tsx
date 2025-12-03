@@ -10,13 +10,11 @@ import { CartelFueraMapa } from '@/components/map-component'
 
 interface BuscarDireccionesProps {
   onLocationSelect: (lat: number, lng: number, address: string) => void
+  onFlyTo: (lat: number, lng: number) => void   // 👈 nuevo callback para pedir vuelo directo
   onMinimizar: () => void
 }
 
-export function BuscarDirecciones({
-  onLocationSelect,
-  onMinimizar,
-}: BuscarDireccionesProps) {
+export function BuscarDirecciones({ onLocationSelect, onFlyTo, onMinimizar }: BuscarDireccionesProps) {
   const [street, setStreet] = useState('')
   const [number, setNumber] = useState('')
   const [selectedAddress, setSelectedAddress] = useState('')
@@ -44,27 +42,24 @@ export function BuscarDirecciones({
       const { lat, lng } = match.location
       setSelectedLatLng({ lat, lng })
       onLocationSelect(lat, lng, fullAddress)
-    } else {
-      const coords = await buscarCoordenadas(fullAddress)
-      if (coords) {
-        // 🚨 Usar helper procesarDireccion para validar y guardar
-        const ok = await procesarDireccion(
-          guardarUbicacion,
-          coords.lat,
-          coords.lng,
-          onLocationSelect,
-          setFueraMapa
-        )
-        if (ok) {
-          setSelectedLatLng(coords)
-          setSelectedAddress(fullAddress)
-        }
-      }
+      onFlyTo(lat, lng)   // 👈 pedir vuelo directo al mapa
+      return
+    }
+
+    const coords = await buscarCoordenadas(fullAddress)
+    if (!coords) return
+
+    const ok = await procesarDireccion(guardarUbicacion, coords.lat, coords.lng, setFueraMapa)
+    if (ok) {
+      setSelectedLatLng(coords)
+      setSelectedAddress(fullAddress)
+      onLocationSelect(coords.lat, coords.lng, fullAddress)
+      onFlyTo(coords.lat, coords.lng)   // 👈 pedir vuelo directo al mapa
     }
   }
 
   return (
-    <>
+    <div>
       <div className="flex items-center justify-between mb-2">
         <strong className="text-sm font-medium">Buscar dirección</strong>
         <Button
@@ -73,6 +68,7 @@ export function BuscarDirecciones({
           onClick={onMinimizar}
           className="h-5 w-5 p-0"
           title="Minimizar menú"
+          type="button"
         >
           <ChevronLeft className="w-3 h-3" />
         </Button>
@@ -95,6 +91,7 @@ export function BuscarDirecciones({
         onClick={handleSearch}
         className="mt-2 w-full"
         disabled={!street || !number.trim()}
+        type="button"
       >
         <Search className="w-4 h-4 mr-2" />
         Buscar dirección
@@ -109,8 +106,7 @@ export function BuscarDirecciones({
         </div>
       )}
 
-      {/* 👇 Cartel de advertencia */}
       {fueraMapa && <CartelFueraMapa />}
-    </>
+    </div>
   )
 }

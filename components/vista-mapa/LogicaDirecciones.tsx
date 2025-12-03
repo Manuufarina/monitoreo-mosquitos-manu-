@@ -58,7 +58,6 @@ export const procesarDireccion = async (
   ) => Promise<boolean>,
   lat: number,
   lng: number,
-  onLocationSelect: (lat: number, lng: number, address: string) => void,
   setFueraMapa: (val: boolean) => void
 ) => {
   try {
@@ -85,8 +84,6 @@ export const procesarDireccion = async (
     // 👇 ahora pasa ubicacion vacío
     const ok = await guardarDireccion(guardarUbicacion, fullAddress, lat, lng)
     if (ok) {
-      const direccionFiltrada = filtrarCalleAltura(fullAddress)
-      onLocationSelect(lat, lng, direccionFiltrada)
       setFueraMapa(false)
       return true
     }

@@ -1,7 +1,6 @@
 'use client'
 
 import { useState } from 'react'
-import dynamic from 'next/dynamic'
 import { ChevronRight } from 'lucide-react'
 import { BuscarDirecciones } from '@/components/vista-mapa/buscar-direcciones'
 import { SidebarInformes } from '@/components/vista-mapa/sidebar-informes'
@@ -9,10 +8,7 @@ import { InformesTrampas } from '@/components/vista-mapa/Informes-Trampas'
 import { Button } from '@/components/ui/button'
 import { shouldHideElemento } from '@/lib/permisos'
 import { BotonReverse } from '@/components/vista-mapa/boton-reverse'
-
-const MapComponent = dynamic(() => import('@/components/map-component.tsx').then(mod => mod.MapComponent), {
-  ssr: false,
-})
+import { MapComponent } from '@/components/map-component'
 
 interface Informe {
   id?: number
@@ -80,6 +76,7 @@ export function MapaMapa({
   const [posicionEditada, setPosicionEditada] = useState<{ lat: number; lng: number } | null>(null)
 
   const [reverseActive, setReverseActive] = useState(true)
+  const [flyToRequest, setFlyToRequest] = useState<{ lat: number; lng: number } | null>(null)
 
   const maximizarMenuBusqueda = () => {
     setMenuBusquedaMinimizado(false)
@@ -110,7 +107,7 @@ export function MapaMapa({
       address: trampa.location.address,
       lat: trampa.location.lat,
       lng: trampa.location.lng,
-      ubicacion: trampa.ubicacion ?? null, // ✅ ahora correcto
+      ubicacion: trampa.ubicacion ?? null,
     })
     setShowFormulario(false)
     setInformeEditando(null)
@@ -153,22 +150,25 @@ export function MapaMapa({
       <MapComponent
         selectedLocation={selectedLocation}
         mosquitoData={mosquitoData}
-        onLocationSelect={handleLocationSelect}
+        onLocationSelect={(lat, lng, address, id) => {
+          handleLocationSelect(lat, lng, address, id)
+        }}
         reverseActive={reverseActive}
         modoEdicionPin={modoEdicionPin}
         posicionEditada={posicionEditada}
         setPosicionEditada={setPosicionEditada}
         guardarUbicacion={guardarUbicacion}
+        flyToRequest={flyToRequest}   // 👈 ahora se pasa directo
       />
 
       {!menuBusquedaMinimizado && !shouldHideElemento(userRol, 'buscar-direcciones') && (
         <div className="absolute top-4 right-4 z-[100] w-80 bg-white/95 backdrop-blur-sm border shadow-lg p-4 rounded-lg">
           <BuscarDirecciones
-            onLocationSelect={(loc) => handleLocationSelect(loc.lat, loc.lng, loc.address, 0)}
-            onCreateForm={(location) => {
-              setSelectedLocation(location)
-              setInformeEditando(null)
-              setShowFormulario(true)
+            onLocationSelect={(lat, lng, address) => {
+              handleLocationSelect(lat, lng, address, 0)
+            }}
+            onFlyTo={(lat, lng) => {
+              setFlyToRequest({ lat, lng })
             }}
             onMinimizar={() => setMenuBusquedaMinimizado(true)}
           />
@@ -209,12 +209,12 @@ export function MapaMapa({
             onMinimizar={() => setSidebarMinimizado(true)}
             modoEdicionPin={modoEdicionPin}
             setModoEdicionPin={setModoEdicionPin}
-            ubicacion={selectedTrampa.ubicacion}   // ✅ agregado
+            ubicacion={selectedTrampa.ubicacion}
           />
         </div>
       )}
 
-       {!showFormulario && menuBusquedaMinimizado && sidebarMinimizado && (
+      {!showFormulario && menuBusquedaMinimizado && sidebarMinimizado && (
         <div className="absolute top-4 right-4 z-[100] flex flex-col gap-3 items-end">
           {!shouldHideElemento(userRol, 'buscar-direcciones') && (
             <Button
