@@ -38,7 +38,9 @@ interface SidebarInformesProps {
   onMinimizar: () => void
   modoEdicionPin: boolean
   setModoEdicionPin: (estado: boolean) => void
-  ubicacion?: string // 👈 nueva prop para descripción
+  ubicacion?: string
+  // 👇 nueva prop para recibir coords editadas desde el mapa
+  posicionEditada?: { lat: number; lng: number } | null
 }
 
 export function SidebarInformes({
@@ -58,6 +60,7 @@ export function SidebarInformes({
   modoEdicionPin,
   setModoEdicionPin,
   ubicacion = '',
+  posicionEditada,
 }: SidebarInformesProps) {
   const [filtroAnio, setFiltroAnio] = useState<string>('')
   const [filtroMes, setFiltroMes] = useState<string>('')
@@ -67,21 +70,22 @@ export function SidebarInformes({
   const [editandoDireccion, setEditandoDireccion] = useState(false)
   const [direccionEditable, setDireccionEditable] = useState(direccion)
 
-  // ✅ sincroniza la dirección cada vez que cambie la prop
   useEffect(() => {
     setDireccionEditable(direccion)
   }, [direccion])
 
-  // ✅ Estado para descripción (ubicacion)
   const [editandoDescripcion, setEditandoDescripcion] = useState(false)
   const [descripcionEditable, setDescripcionEditable] = useState(ubicacion ?? '')
 
-  // ✅ sincroniza la descripción cada vez que cambie la prop
   useEffect(() => {
     setDescripcionEditable(ubicacion ?? '')
+    setEditandoDescripcion(false)
   }, [ubicacion])
 
-  const { trampas } = useActualizar() || { trampas: [] }
+  const { actualizarDescripcion, actualizarPosicion } = useActualizar() || {
+    actualizarDescripcion: async () => false,
+    actualizarPosicion: async () => false,
+  }
 
   const añosDisponibles = Array.from(
     new Set(informes.map((i) => i.fecha.split('T')[0].slice(0, 4)))
@@ -144,24 +148,29 @@ export function SidebarInformes({
   }
 
   const handleGuardarDescripcion = async () => {
-    try {
-      const res = await fetch('/api/trampas', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          id: trampaId,
-          nuevaUbicacion: descripcionEditable, // 👈 usar el nombre real del campo
-        }),
-      })
-      if (res.ok) {
-        alert('✅ Descripción actualizada en la base')
-        setEditandoDescripcion(false)
-      } else {
-        alert('❌ No se pudo actualizar la descripción')
-      }
-    } catch (err) {
-      console.error('Error al actualizar descripción:', err)
-      alert('❌ Error al conectar con el servidor')
+    const ok = await actualizarDescripcion(trampaId, descripcionEditable)
+    if (ok) {
+      alert('✅ Descripción actualizada en la base')
+      setEditandoDescripcion(false)
+    } else {
+      alert('❌ No se pudo actualizar la descripción')
+    }
+  }
+
+  // 👇 nuevo: guardar posición si hay coords editadas
+  useEffect(() => {
+    if (modoEdicionPin && posicionEditada) {
+      handleGuardarPosicion(posicionEditada.lat, posicionEditada.lng)
+    }
+  }, [posicionEditada])
+
+  const handleGuardarPosicion = async (nuevaLat: number, nuevaLng: number) => {
+    const ok = await actualizarPosicion(trampaId, nuevaLat, nuevaLng)
+    if (ok) {
+      alert('✅ Posición actualizada en la base')
+      setModoEdicionPin(false)
+    } else {
+      alert('❌ No se pudo actualizar la posición')
     }
   }
 
@@ -179,6 +188,7 @@ export function SidebarInformes({
       </div>
 
       <div className="space-y-1 pt-6">
+        {/* Dirección */}
         <div className="flex items-center justify-between">
           <Label className="text-sm font-medium">Dirección</Label>
           {informesFiltrados.length === 0 && (
@@ -225,7 +235,7 @@ export function SidebarInformes({
           Descripción
         </Button>
 
-        {/* menú tipo block de notas flotante */}
+         {/* menú tipo block de notas flotante */}
         {editandoDescripcion && (
           <div
             className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50"
@@ -323,30 +333,32 @@ export function SidebarInformes({
           {informesFiltrados.length === 0 ? (
             <p className="text-sm text-muted-foreground">No hay informes registrados.</p>
           ) : (
-            informesFiltrados.map((informe) => (
-              <div
-                key={informe.id ?? informe.fecha}
-                className="flex items-center justify-between w-full"
-              >
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="flex-1 justify-start text-left"
-                  onClick={() => onEditarInforme(informe)}
+            <div className="max-h-32 overflow-y-auto space-y-2 pr-1">
+              {informesFiltrados.map((informe) => (
+                <div
+                  key={informe.id ?? informe.fecha}
+                  className="flex items-center justify-between w-full"
                 >
-                  📅 {informe.fecha.split('T')[0]}
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => setInformePendiente(informe)}
-                  className="text-red-600 hover:bg-red-100 ml-2"
-                  title="Eliminar informe"
-                >
-                  <Trash2 className="w-4 h-4" />
-                </Button>
-              </div>
-            ))
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="flex-1 justify-start text-left"
+                    onClick={() => onEditarInforme(informe)}
+                  >
+                    📅 {informe.fecha.split('T')[0]}
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => setInformePendiente(informe)}
+                    className="text-red-600 hover:bg-red-100 ml-2"
+                    title="Eliminar informe"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </Button>
+                </div>
+              ))}
+            </div>
           )}
 
           <div className="pt-2 space-y-2">

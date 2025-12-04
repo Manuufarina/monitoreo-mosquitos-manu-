@@ -30,6 +30,7 @@ interface ActualizarContextType {
   eliminarInforme: (id: number) => Promise<boolean>
   eliminarPin: (direccion: string) => Promise<boolean>
   actualizarPosicion: (trampaId: number, nuevaLat: number, nuevaLng: number) => Promise<boolean>
+  actualizarDescripcion: (trampaId: number, nuevaUbicacion: string) => Promise<boolean>
   selectedTrampa: any | null
   setSelectedTrampa: (trampa: any | null) => void
 }
@@ -55,7 +56,7 @@ export function ActualizarProvider({ children }: { children: React.ReactNode }) 
             lat: Number(t.lat),
             lng: Number(t.lng),
           },
-          ubicacion: t.ubicacion ?? "", // ✅ usamos el campo real de la base
+          ubicacion: t.ubicacion ?? "",
           traps: { ovi: t.ovi ?? false, adulto: t.adulto ?? false },
         }))
       )
@@ -93,7 +94,6 @@ export function ActualizarProvider({ children }: { children: React.ReactNode }) 
       const res = await fetch('/api/trampas', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        // ✅ mandamos ubicacion directamente, no dentro de location
         body: JSON.stringify({ direccion, lat, lng, traps, ubicacion }),
       })
       const result = await res.json()
@@ -110,7 +110,6 @@ export function ActualizarProvider({ children }: { children: React.ReactNode }) 
   const crearInforme = async (nuevo: Informe, informeAnterior?: Informe): Promise<boolean> => {
     try {
       const method = nuevo.id || informeAnterior?.id ? 'PUT' : 'POST'
-
       const res = await fetch('/api/informes', {
         method,
         headers: { 'Content-Type': 'application/json' },
@@ -181,16 +180,46 @@ export function ActualizarProvider({ children }: { children: React.ReactNode }) 
       const res = await fetch('/api/trampas', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        // ✅ usamos id, no trampaId
-        body: JSON.stringify({ id: trampaId, nuevaLat, nuevaLng }),
+        body: JSON.stringify({ id: trampaId, nuevaLat, nuevaLng }), // 👈 usar id
       })
       const result = await res.json()
       if (result.success) {
-        await recargarTrampas()
+        setTrampas((prev) =>
+          prev.map((t) =>
+            t.id === trampaId
+              ? { ...t, location: { ...t.location, lat: nuevaLat, lng: nuevaLng } }
+              : t
+          )
+        )
         return true
       }
     } catch (err) {
       console.error('❌ Error al actualizar posición:', err)
+    }
+    return false
+  }
+
+  const actualizarDescripcion = async (
+    trampaId: number,
+    nuevaUbicacion: string
+  ): Promise<boolean> => {
+    try {
+      const res = await fetch('/api/trampas', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: trampaId, nuevaUbicacion }), // 👈 usar id
+      })
+      const result = await res.json()
+      if (result.success) {
+        setTrampas((prev) =>
+          prev.map((t) =>
+            t.id === trampaId ? { ...t, ubicacion: nuevaUbicacion } : t
+          )
+        )
+        return true
+      }
+    } catch (err) {
+      console.error('❌ Error al actualizar descripción:', err)
     }
     return false
   }
@@ -207,6 +236,7 @@ export function ActualizarProvider({ children }: { children: React.ReactNode }) 
         eliminarInforme,
         eliminarPin,
         actualizarPosicion,
+        actualizarDescripcion,
         selectedTrampa,
         setSelectedTrampa,
       }}

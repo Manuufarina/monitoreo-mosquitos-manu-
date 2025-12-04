@@ -12,7 +12,6 @@ import L from 'leaflet'
 import { useEffect, useState } from 'react'
 import { CameraFlyTo } from '@/components/CameraFlyTo'
 import React from 'react'
-import { useActualizar } from '@/hooks/useActualizar'
 
 /* 🔎 Zonas permitidas en San Isidro */
 const zonasPermitidas = [
@@ -52,7 +51,7 @@ export const CartelFueraMapa: React.FC = () => {
 }
 
 interface MapComponentProps {
-  selectedLocation: { id?: number; address: string; lat: number; lng: number; ubicacion?: string } | null
+  selectedLocation: { address: string; lat: number; lng: number; ubicacion?: string } | null
   mosquitoData: any[]
   informesPorDireccion?: Record<string, any[]>
   onLocationSelect?: (lat: number, lng: number, address: string, id?: number) => void
@@ -67,7 +66,7 @@ interface MapComponentProps {
   posicionEditada?: { lat: number; lng: number } | null
   setPosicionEditada?: (pos: { lat: number; lng: number }) => void
   reverseActive: boolean
-  flyToRequest?: { lat: number; lng: number } | null
+  flyToRequest?: { lat: number; lng: number } | null   // 👈 nueva prop
 }
 
 export function MapComponent({
@@ -85,8 +84,6 @@ export function MapComponent({
   const [tempPin, setTempPin] = useState<{ lat: number; lng: number; address: string } | null>(null)
   const [fueraMapa, setFueraMapa] = useState(false)
 
-  const { actualizarPosicion } = useActualizar()
-
   useEffect(() => {
     delete L.Icon.Default.prototype._getIconUrl
     L.Icon.Default.mergeOptions({
@@ -96,6 +93,7 @@ export function MapComponent({
     })
   }, [])
 
+  // ✅ Center fijo: no depende de selectedLocation
   const center: [number, number] = [-34.471, -58.537]
 
   function ClickHandler() {
@@ -131,11 +129,10 @@ export function MapComponent({
             setTempPin({ lat, lng, address: fullAddress })
             setFueraMapa(false)
 
-            // ❌ no pasar id=0 — deja undefined para nuevas ubicaciones
-            if (onLocationSelect) onLocationSelect(lat, lng, fullAddress)
+            if (onLocationSelect) onLocationSelect(lat, lng, fullAddress, 0)
 
             if (guardarUbicacion) {
-              await guardarUbicacion(fullAddress, lat, lng, { ovi: false, adulto: false }, '')
+              await guardarUbicacion(fullAddress, lat, lng, { ovi: false, adulto: false }, "")
             }
           } catch (err) {
             console.error('Error en reverse geocoding:', err)
@@ -165,6 +162,7 @@ export function MapComponent({
 
         <ClickHandler />
 
+        {/* 👇 FlyTo directo si hay pedido */}
         {flyToRequest && (
           <CameraFlyTo
             key={`${flyToRequest.lat}-${flyToRequest.lng}`}
@@ -172,7 +170,7 @@ export function MapComponent({
           />
         )}
 
-        {/* Pin azul persistente */}
+        {/* 👇 Pin azul persistente */}
         {selectedLocation &&
           typeof selectedLocation.lat === 'number' &&
           typeof selectedLocation.lng === 'number' && (
@@ -184,19 +182,11 @@ export function MapComponent({
               }
               draggable={modoEdicionPin}
               eventHandlers={{
-                dragend: async (e) => {
+                dragend: (e) => {
                   const marker = e.target
                   const pos = marker.getLatLng()
-                  setPosicionEditada?.({ lat: pos.lat, lng: pos.lng })
-
-                  // Guardar solo si hay id válido y el modo edición está activo
-                  const id = selectedLocation?.id
-                  if (modoEdicionPin && id && id > 0) {
-                    console.log('PATCH posición -> id:', id, 'lat:', pos.lat, 'lng:', pos.lng)
-                    const ok = await actualizarPosicion(id, pos.lat, pos.lng)
-                    alert(ok ? '✅ Posición actualizada en la base' : '❌ No se pudo actualizar la posición')
-                  } else {
-                    console.warn('dragend sin id válido o sin modoEdicionPin')
+                  if (setPosicionEditada) {
+                    setPosicionEditada({ lat: pos.lat, lng: pos.lng })
                   }
                 },
               }}
@@ -209,7 +199,7 @@ export function MapComponent({
             </Marker>
           )}
 
-        {/* Pin temporal */}
+        {/* 👇 Pin temporal */}
         {tempPin && (
           <Marker position={[tempPin.lat, tempPin.lng]}>
             <Popup>
@@ -220,7 +210,7 @@ export function MapComponent({
           </Marker>
         )}
 
-        {/* Renderizado de trampas */}
+        {/* 👇 Renderizado de trampas */}
         {Array.isArray(mosquitoData) &&
           mosquitoData.map((entry, index) => {
             const location = entry.location

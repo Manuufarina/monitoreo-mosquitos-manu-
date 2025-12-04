@@ -1,7 +1,68 @@
 'use client'
 
-import React from 'react'
+import React, { useState } from 'react'
 import { esZonaValida } from '@/components/map-component'
+import { Button } from '@/components/ui/button'
+
+/* ------------------------------
+   Modal de confirmación reutilizable
+-------------------------------- */
+interface ModalConfirmacionProps {
+  mensaje: string
+  onAceptar: () => void
+  onCancelar: () => void
+}
+
+function ModalConfirmacion({ mensaje, onAceptar, onCancelar }: ModalConfirmacionProps) {
+  return (
+    <div className="fixed inset-0 z-[2000] flex items-center justify-center bg-black/50">
+      <div className="bg-white rounded-lg shadow-lg p-4 max-w-sm w-full">
+        <p className="mb-4 text-sm">{mensaje}</p>
+        <div className="flex justify-end gap-2">
+          <Button variant="ghost" onClick={onCancelar} type="button">
+            Cancelar
+          </Button>
+          <Button onClick={onAceptar} type="button">
+            Aceptar
+          </Button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+/* ------------------------------
+   Hook para pedir confirmación
+-------------------------------- */
+export const useConfirmacion = () => {
+  const [opciones, setOpciones] = useState<{ mensaje: string; resolver: (ok: boolean) => void } | null>(null)
+
+  const pedirConfirmacion = (mensaje: string): Promise<boolean> => {
+    return new Promise((resolve) => {
+      setOpciones({ mensaje, resolver: resolve })
+    })
+  }
+
+  const Modal = opciones ? (
+    <ModalConfirmacion
+      mensaje={opciones.mensaje}
+      onAceptar={() => {
+        opciones.resolver(true)
+        setOpciones(null)
+      }}
+      onCancelar={() => {
+        opciones.resolver(false)
+        setOpciones(null)
+      }}
+    />
+  ) : null
+
+  return { pedirConfirmacion, Modal }
+}
+
+/* ------------------------------
+   Helpers de direcciones
+-------------------------------- */
 
 // Filtrar solo calle + altura
 export const filtrarCalleAltura = (direccion: string) => {
@@ -43,7 +104,6 @@ export const guardarDireccion = async (
   lng: number
 ) => {
   const direccionFiltrada = filtrarCalleAltura(direccion).toLowerCase()
-  // 👇 ahora pasamos ubicacion vacío por defecto
   return await guardarUbicacion(direccionFiltrada, lat, lng, { ovi: false, adulto: false }, "")
 }
 
@@ -58,7 +118,8 @@ export const procesarDireccion = async (
   ) => Promise<boolean>,
   lat: number,
   lng: number,
-  setFueraMapa: (val: boolean) => void
+  setFueraMapa: (val: boolean) => void,
+  pedirConfirmacion: (mensaje: string) => Promise<boolean>
 ) => {
   try {
     const response = await fetch(
@@ -81,7 +142,12 @@ export const procesarDireccion = async (
     const number = addressObj.house_number || 'S/N'
     const fullAddress = `${street} ${number}, ${addressObj.suburb || addressObj.city || ''}`
 
-    // 👇 ahora pasa ubicacion vacío
+    // 👇 Usar modal React para confirmar
+    const confirmar = await pedirConfirmacion(`¿Desea colocar la trampa en:\n${fullAddress}?`)
+    if (!confirmar) {
+      return false // usuario canceló
+    }
+
     const ok = await guardarDireccion(guardarUbicacion, fullAddress, lat, lng)
     if (ok) {
       setFueraMapa(false)

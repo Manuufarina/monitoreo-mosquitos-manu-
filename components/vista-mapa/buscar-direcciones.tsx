@@ -5,12 +5,12 @@ import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { Search, ChevronLeft } from 'lucide-react'
 import { useActualizar } from '@/hooks/useActualizar'
-import { buscarCoordenadas, procesarDireccion } from '@/components/vista-mapa/LogicaDirecciones'
+import { buscarCoordenadas, procesarDireccion, useConfirmacion } from '@/components/vista-mapa/LogicaDirecciones'
 import { CartelFueraMapa } from '@/components/map-component'
 
 interface BuscarDireccionesProps {
   onLocationSelect: (lat: number, lng: number, address: string) => void
-  onFlyTo: (lat: number, lng: number) => void   // 👈 nuevo callback para pedir vuelo directo
+  onFlyTo: (lat: number, lng: number) => void
   onMinimizar: () => void
 }
 
@@ -22,19 +22,47 @@ export function BuscarDirecciones({ onLocationSelect, onFlyTo, onMinimizar }: Bu
   const [fueraMapa, setFueraMapa] = useState(false)
 
   const { trampas: mosquitoData = [], guardarUbicacion } = useActualizar()
+  const { pedirConfirmacion, Modal } = useConfirmacion()
+
+  // ✅ Autocompletado: calles únicas completas ya registradas (sin altura)
+  const callesRegistradas = Array.from(
+    new Set(
+      mosquitoData
+        .map((t) => {
+          const addr = t.location?.address ?? ''
+          let calle = addr.split(',')[0].trim().toLowerCase()
+
+          // Si la última palabra es un número (altura), la removemos
+          const partes = calle.split(' ')
+          if (partes.length > 1 && /^\d+$/.test(partes[partes.length - 1])) {
+            partes.pop()
+            calle = partes.join(' ')
+          }
+
+          return calle
+        })
+        .filter(Boolean)
+    )
+  )
+
+  // ✅ Filtrar sugerencias según lo que escribe el usuario (por cualquier parte del nombre)
+  const sugerencias = street
+    ? callesRegistradas.filter((c) =>
+        c.includes(street.trim().toLowerCase())
+      )
+    : callesRegistradas
 
   const handleSearch = async () => {
     if (!street || !number.trim()) return
 
-    const fullAddress = `${street} ${number.trim()}`
+    const fullAddress = `${street.trim()} ${number.trim()}`
     setSelectedAddress(fullAddress)
 
-    // Buscar si ya existe en la base
+    // ✅ Buscar si ya existe pin con esa calle+altura
     const match = Array.isArray(mosquitoData)
       ? mosquitoData.find(
           (entry) =>
-            entry.location?.address?.trim().toLowerCase() ===
-            fullAddress.trim().toLowerCase()
+            entry.location?.address?.trim().toLowerCase() === fullAddress.toLowerCase()
         )
       : undefined
 
@@ -42,19 +70,27 @@ export function BuscarDirecciones({ onLocationSelect, onFlyTo, onMinimizar }: Bu
       const { lat, lng } = match.location
       setSelectedLatLng({ lat, lng })
       onLocationSelect(lat, lng, fullAddress)
-      onFlyTo(lat, lng)   // 👈 pedir vuelo directo al mapa
+      onFlyTo(lat, lng)   // 👈 vuelo directo al pin existente
       return
     }
 
+    // ❌ No existe → lógica actual de crear pin
     const coords = await buscarCoordenadas(fullAddress)
     if (!coords) return
 
-    const ok = await procesarDireccion(guardarUbicacion, coords.lat, coords.lng, setFueraMapa)
+    const ok = await procesarDireccion(
+      guardarUbicacion,
+      coords.lat,
+      coords.lng,
+      setFueraMapa,
+      pedirConfirmacion
+    )
+
     if (ok) {
       setSelectedLatLng(coords)
       setSelectedAddress(fullAddress)
       onLocationSelect(coords.lat, coords.lng, fullAddress)
-      onFlyTo(coords.lat, coords.lng)   // 👈 pedir vuelo directo al mapa
+      onFlyTo(coords.lat, coords.lng)
     }
   }
 
@@ -74,11 +110,18 @@ export function BuscarDirecciones({ onLocationSelect, onFlyTo, onMinimizar }: Bu
         </Button>
       </div>
 
+      {/* ✅ Input con autocompletado de calles completas (sin altura) */}
       <Input
+        list="callesRegistradas"
         value={street}
         onChange={(e) => setStreet(e.target.value)}
         placeholder="Calle"
       />
+      <datalist id="callesRegistradas">
+        {sugerencias.map((c) => (
+          <option key={c} value={c} />
+        ))}
+      </datalist>
 
       <Input
         value={number}
@@ -107,6 +150,7 @@ export function BuscarDirecciones({ onLocationSelect, onFlyTo, onMinimizar }: Bu
       )}
 
       {fueraMapa && <CartelFueraMapa />}
+      {Modal}
     </div>
   )
 }

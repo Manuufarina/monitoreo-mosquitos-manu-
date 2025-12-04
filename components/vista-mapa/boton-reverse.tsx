@@ -2,7 +2,7 @@
 
 import { MapPin } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { procesarDireccion } from '@/components/vista-mapa/LogicaDirecciones'
+import { procesarDireccion, useConfirmacion } from '@/components/vista-mapa/LogicaDirecciones'
 import { CartelFueraMapa } from '@/components/map-component'
 import { useState } from 'react'
 
@@ -28,6 +28,7 @@ export function BotonReverse({
   onLocationSelect,
 }: BotonReverseProps) {
   const [fueraMapa, setFueraMapa] = useState(false)
+  const { pedirConfirmacion, Modal } = useConfirmacion()
 
   const handleClick = async () => {
     const nextState = !reverseActive
@@ -35,19 +36,23 @@ export function BotonReverse({
 
     // 👇 Cuando pasamos de modo zoom a modo pin azul
     if (!nextState && selectedLocation) {
-      await procesarDireccion(
-        async (direccion, lat, lng) => {
-          // ✅ Guardamos la trampa en la base con descripción si existe
-          await guardarUbicacion(direccion, lat, lng, { ovi: false, adulto: false }, selectedLocation.ubicacion ?? null)
-        },
+      const ok = await procesarDireccion(
+        guardarUbicacion,
         selectedLocation.lat,
         selectedLocation.lng,
-        (lat, lng, address) => {
-          // ✅ Seleccionamos también la ubicación con descripción
-          onLocationSelect(lat, lng, address, selectedLocation.ubicacion ?? null)
-        },
-        setFueraMapa
+        setFueraMapa,
+        pedirConfirmacion   // 👈 ahora usamos el modal React
       )
+
+      if (ok) {
+        // ✅ Seleccionamos también la ubicación con descripción
+        onLocationSelect(
+          selectedLocation.lat,
+          selectedLocation.lng,
+          selectedLocation.address,
+          selectedLocation.ubicacion ?? null
+        )
+      }
     }
   }
 
@@ -68,6 +73,7 @@ export function BotonReverse({
       </Button>
 
       {fueraMapa && <CartelFueraMapa />}
+      {Modal} {/* 👈 monta el modal si hay confirmación pendiente */}
     </>
   )
 }

@@ -65,7 +65,7 @@ export function MapaMapa({
 
   const mosquitoData = trampas
 
-  const [selectedLocation, setSelectedLocation] = useState<{ address: string; lat: number; lng: number; ubicacion?: string } | null>(null)
+  const [selectedLocation, setSelectedLocation] = useState<{ id?: number; address: string; lat: number; lng: number; ubicacion?: string } | null>(null)
   const [selectedTrampa, setSelectedTrampa] = useState<any | null>(null)
   const [tipoSeleccionado, setTipoSeleccionado] = useState<'ovi' | 'adultos' | null>(null)
   const [showFormulario, setShowFormulario] = useState(false)
@@ -94,7 +94,7 @@ export function MapaMapa({
       : undefined
 
     const fallbackTrampa = {
-      id: id ?? 0,
+      id: id ?? undefined, // ✅ no usar 0
       location: { address, lat, lng },
       ubicacion: null,
       traps: { ovi: false, adulto: false },
@@ -104,6 +104,7 @@ export function MapaMapa({
 
     setSelectedTrampa(trampa)
     setSelectedLocation({
+      id: trampa.id, // ✅ ahora guardamos el id real
       address: trampa.location.address,
       lat: trampa.location.lat,
       lng: trampa.location.lng,
@@ -158,14 +159,14 @@ export function MapaMapa({
         posicionEditada={posicionEditada}
         setPosicionEditada={setPosicionEditada}
         guardarUbicacion={guardarUbicacion}
-        flyToRequest={flyToRequest}   // 👈 ahora se pasa directo
+        flyToRequest={flyToRequest}
       />
 
       {!menuBusquedaMinimizado && !shouldHideElemento(userRol, 'buscar-direcciones') && (
         <div className="absolute top-4 right-4 z-[100] w-80 bg-white/95 backdrop-blur-sm border shadow-lg p-4 rounded-lg">
           <BuscarDirecciones
             onLocationSelect={(lat, lng, address) => {
-              handleLocationSelect(lat, lng, address, 0)
+              handleLocationSelect(lat, lng, address) // ✅ sin id=0
             }}
             onFlyTo={(lat, lng) => {
               setFlyToRequest({ lat, lng })
@@ -214,7 +215,7 @@ export function MapaMapa({
         </div>
       )}
 
-      {!showFormulario && menuBusquedaMinimizado && sidebarMinimizado && (
+        {!showFormulario && menuBusquedaMinimizado && sidebarMinimizado && (
         <div className="absolute top-4 right-4 z-[100] flex flex-col gap-3 items-end">
           {!shouldHideElemento(userRol, 'buscar-direcciones') && (
             <Button

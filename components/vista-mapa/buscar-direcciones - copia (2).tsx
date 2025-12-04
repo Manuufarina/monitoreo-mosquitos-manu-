@@ -10,7 +10,7 @@ import { CartelFueraMapa } from '@/components/map-component'
 
 interface BuscarDireccionesProps {
   onLocationSelect: (lat: number, lng: number, address: string) => void
-  onFlyTo: (lat: number, lng: number) => void   // 👈 callback para pedir vuelo directo
+  onFlyTo: (lat: number, lng: number) => void
   onMinimizar: () => void
 }
 
@@ -24,18 +24,37 @@ export function BuscarDirecciones({ onLocationSelect, onFlyTo, onMinimizar }: Bu
   const { trampas: mosquitoData = [], guardarUbicacion } = useActualizar()
   const { pedirConfirmacion, Modal } = useConfirmacion()
 
+  // ✅ Autocompletado: calles únicas completas ya registradas
+  const callesRegistradas = Array.from(
+    new Set(
+      mosquitoData
+        .map((t) => {
+          const addr = t.location?.address ?? ''
+          // Tomar la parte antes de la coma (ej: "Avenida Fondo de la Legua")
+          return addr.split(',')[0].trim().toLowerCase()
+        })
+        .filter(Boolean)
+    )
+  )
+
+  // ✅ Filtrar sugerencias según lo que escribe el usuario (por cualquier parte del nombre)
+  const sugerencias = street
+    ? callesRegistradas.filter((c) =>
+        c.includes(street.trim().toLowerCase())
+      )
+    : callesRegistradas
+
   const handleSearch = async () => {
     if (!street || !number.trim()) return
 
-    const fullAddress = `${street} ${number.trim()}`
+    const fullAddress = `${street.trim()} ${number.trim()}`
     setSelectedAddress(fullAddress)
 
-    // Buscar si ya existe en la base
+    // ✅ Buscar si ya existe pin con esa calle+altura
     const match = Array.isArray(mosquitoData)
       ? mosquitoData.find(
           (entry) =>
-            entry.location?.address?.trim().toLowerCase() ===
-            fullAddress.trim().toLowerCase()
+            entry.location?.address?.trim().toLowerCase() === fullAddress.toLowerCase()
         )
       : undefined
 
@@ -43,10 +62,11 @@ export function BuscarDirecciones({ onLocationSelect, onFlyTo, onMinimizar }: Bu
       const { lat, lng } = match.location
       setSelectedLatLng({ lat, lng })
       onLocationSelect(lat, lng, fullAddress)
-      onFlyTo(lat, lng)   // 👈 pedir vuelo directo al mapa
+      onFlyTo(lat, lng)   // 👈 vuelo directo al pin existente
       return
     }
 
+    // ❌ No existe → lógica actual de crear pin
     const coords = await buscarCoordenadas(fullAddress)
     if (!coords) return
 
@@ -55,14 +75,14 @@ export function BuscarDirecciones({ onLocationSelect, onFlyTo, onMinimizar }: Bu
       coords.lat,
       coords.lng,
       setFueraMapa,
-      pedirConfirmacion   // 👈 ahora usamos el modal React
+      pedirConfirmacion
     )
 
     if (ok) {
       setSelectedLatLng(coords)
       setSelectedAddress(fullAddress)
       onLocationSelect(coords.lat, coords.lng, fullAddress)
-      onFlyTo(coords.lat, coords.lng)   // 👈 pedir vuelo directo al mapa
+      onFlyTo(coords.lat, coords.lng)
     }
   }
 
@@ -82,11 +102,18 @@ export function BuscarDirecciones({ onLocationSelect, onFlyTo, onMinimizar }: Bu
         </Button>
       </div>
 
+      {/* ✅ Input con autocompletado de calles completas */}
       <Input
+        list="callesRegistradas"
         value={street}
         onChange={(e) => setStreet(e.target.value)}
         placeholder="Calle"
       />
+      <datalist id="callesRegistradas">
+        {sugerencias.map((c) => (
+          <option key={c} value={c} />
+        ))}
+      </datalist>
 
       <Input
         value={number}
@@ -115,7 +142,7 @@ export function BuscarDirecciones({ onLocationSelect, onFlyTo, onMinimizar }: Bu
       )}
 
       {fueraMapa && <CartelFueraMapa />}
-      {Modal} {/* 👈 monta el modal si hay confirmación pendiente */}
+      {Modal}
     </div>
   )
 }

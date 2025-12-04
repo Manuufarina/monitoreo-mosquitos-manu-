@@ -2,8 +2,8 @@
 
 import { MapPin } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { filtrarCalleAltura, guardarDireccion } from '@/components/vista-mapa/LogicaDirecciones'
-import { esZonaValida, CartelFueraMapa } from '@/components/map-component'
+import { procesarDireccion } from '@/components/vista-mapa/LogicaDirecciones'
+import { CartelFueraMapa } from '@/components/map-component'
 import { useState } from 'react'
 
 interface BotonReverseProps {
@@ -13,10 +13,11 @@ interface BotonReverseProps {
     direccion: string,
     lat: number,
     lng: number,
-    traps: { ovi: boolean; adulto: boolean }
+    traps: { ovi: boolean; adulto: boolean },
+    ubicacion?: string
   ) => Promise<boolean>
-  selectedLocation: { address: string; lat: number; lng: number } | null
-  onLocationSelect: (lat: number, lng: number, address: string) => void
+  selectedLocation: { address: string; lat: number; lng: number; ubicacion?: string } | null
+  onLocationSelect: (lat: number, lng: number, address: string, ubicacion?: string) => void
 }
 
 export function BotonReverse({
@@ -32,47 +33,23 @@ export function BotonReverse({
     const nextState = !reverseActive
     onToggle(nextState)
 
+    // 👇 Cuando pasamos de modo zoom a modo pin azul
     if (!nextState && selectedLocation) {
-      try {
-        // 🚨 Reverse geocoding para obtener detalles reales
-        const response = await fetch(
-          `https://nominatim.openstreetmap.org/reverse?format=json&lat=${selectedLocation.lat}&lon=${selectedLocation.lng}&addressdetails=1`,
-          { headers: { 'Accept-Language': 'es' } }
-        )
-        const data = await response.json()
-        const addressObj = data.address
+      const ok = await procesarDireccion(
+        guardarUbicacion,
+        selectedLocation.lat,
+        selectedLocation.lng,
+        setFueraMapa
+      )
 
-        // 🔎 Validación con esZonaValida
-        if (!addressObj || !esZonaValida(addressObj)) {
-          setFueraMapa(true)
-          return
-        }
-
-        // 👇 Construir dirección legible
-        const street =
-          addressObj.road ||
-          addressObj.pedestrian ||
-          addressObj.street ||
-          'Calle desconocida'
-        const number = addressObj.house_number || 'S/N'
-        const fullAddress = `${street} ${number}, ${addressObj.suburb || addressObj.city || ''}`
-
-        const ok = await guardarDireccion(
-          guardarUbicacion,
-          fullAddress,
+      if (ok) {
+        // ✅ Seleccionamos también la ubicación con descripción
+        onLocationSelect(
           selectedLocation.lat,
-          selectedLocation.lng
+          selectedLocation.lng,
+          selectedLocation.address,
+          selectedLocation.ubicacion ?? null
         )
-        if (ok) {
-          const direccionFiltrada = filtrarCalleAltura(fullAddress)
-          onLocationSelect(selectedLocation.lat, selectedLocation.lng, direccionFiltrada)
-          setFueraMapa(false)
-        } else {
-          alert('❌ No se pudo guardar el pin azul en la base')
-        }
-      } catch (error) {
-        console.error('Error al validar dirección:', error)
-        alert('⚠️ Error al buscar dirección en Nominatim')
       }
     }
   }

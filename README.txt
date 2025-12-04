@@ -170,3 +170,45 @@ Conecte BuscarDirecciones:
 onLocationSelect actualiza la selección de trampa/ubicación.
 onFlyTo setea flyToRequest → el mapa vuela directo.
 Todo el CSS y la UI de búsqueda siguen en el panel, no dentro del mapa.
+----------------------------------------------------------------------------------------------------------------
+----------------------------------------------------------------------------------------------------------------
+
+
+
+resumen de estos ~2 meses:
+Refactor de modales y lógica de direcciones.
+Validación estricta de datos.
+Sincronización instantánea con backend.
+Arquitectura modular pensada para escalar.
+
+
+
+----------------------------------------------------------------------------------------------------------------
+----------------------------------------------------------------------------------------------------------------
+Día 3/12
+Problema inicial
+El pin azul del mapa se podía arrastrar, pero la nueva posición no se guardaba en la base.
+El PATCH nunca encontraba la trampa porque el id llegaba como undefined o 0.
+Diagnóstico
+MapComponent estaba enviando id=0 cuando se creaba un pin temporal.
+SidebarInformes dependía de selectedLocation.id, pero ese valor no se estaba guardando en el estado.
+MapaMapa armaba selectedLocation sin incluir el id real de la trampa.
+El route.ts estaba correcto: esperaba { id, nuevaLat, nuevaLng }.
+Cambios que hicimos
+MapComponent
+En el dragend ahora guarda la posición solo si hay un id válido.
+Se eliminó el uso de id=0 al crear pins temporales.
+MapaMapa
+selectedLocation ahora incluye siempre el id de la trampa seleccionada.
+En el buscador (BuscarDirecciones) ya no se pasa id=0 para nuevas ubicaciones.
+SidebarInformes
+Confirmamos que recibe trampaId desde selectedTrampa.id y lo usa en los PATCH de dirección/ubicación.
+El botón de Modificar posición del pin activa el modo edición y el mapa guarda correctamente.
+Flujo completo revisado
+Sidebar activa modo edición → MapComponent permite arrastrar → dragend dispara PATCH con id válido → route actualiza base → Page refresca trampas/informes.
+Resultado
+El pin azul ahora se mueve y guarda la nueva posición en la base sin errores.
+El flujo quedó modular pero sólido: cada archivo cumple su rol y se comunica bien.
+En pocas palabras: el bug era que el id no llegaba al mapa, lo corregimos pasando siempre el id real desde MapaMapa y evitando id=0.
+----------------------------------------------------------------------------------------------------------------
+Día 4/12
