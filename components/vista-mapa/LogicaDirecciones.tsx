@@ -17,7 +17,7 @@ function ModalConfirmacion({ mensaje, onAceptar, onCancelar }: ModalConfirmacion
   return (
     <div className="fixed inset-0 z-[2000] flex items-center justify-center bg-black/50">
       <div className="bg-white rounded-lg shadow-lg p-4 max-w-sm w-full">
-        <p className="mb-4 text-sm">{mensaje}</p>
+        <p className="mb-4 text-sm whitespace-pre-line">{mensaje}</p>
         <div className="flex justify-end gap-2">
           <Button variant="ghost" onClick={onCancelar} type="button">
             Cancelar
@@ -119,7 +119,8 @@ export const procesarDireccion = async (
   lat: number,
   lng: number,
   setFueraMapa: (val: boolean) => void,
-  pedirConfirmacion: (mensaje: string) => Promise<boolean>
+  pedirConfirmacion: (mensaje: string) => Promise<boolean>,
+  onReverseComplete?: () => void   // 👈 nuevo callback opcional
 ) => {
   try {
     const response = await fetch(
@@ -151,6 +152,8 @@ export const procesarDireccion = async (
     const ok = await guardarDireccion(guardarUbicacion, fullAddress, lat, lng)
     if (ok) {
       setFueraMapa(false)
+      // ✅ volver automáticamente a modo zoom
+      if (onReverseComplete) onReverseComplete()
       return true
     }
     return false

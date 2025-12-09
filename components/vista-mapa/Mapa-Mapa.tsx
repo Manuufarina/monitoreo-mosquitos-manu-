@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button'
 import { shouldHideElemento } from '@/lib/permisos'
 import { BotonReverse } from '@/components/vista-mapa/boton-reverse'
 import { MapComponent } from '@/components/map-component'
+import { procesarDireccion, useConfirmacion } from '@/components/vista-mapa/LogicaDirecciones'
 
 interface Informe {
   id?: number
@@ -71,48 +72,70 @@ export function MapaMapa({
   const [showFormulario, setShowFormulario] = useState(false)
   const [informeEditando, setInformeEditando] = useState<Informe | null>(null)
   const [menuBusquedaMinimizado, setMenuBusquedaMinimizado] = useState(false)
-  const [sidebarMinimizado, setSidebarMinimizado] = useState(true)
   const [modoEdicionPin, setModoEdicionPin] = useState(false)
   const [posicionEditada, setPosicionEditada] = useState<{ lat: number; lng: number } | null>(null)
 
   const [reverseActive, setReverseActive] = useState(true)
   const [flyToRequest, setFlyToRequest] = useState<{ lat: number; lng: number } | null>(null)
 
+  const { pedirConfirmacion, Modal } = useConfirmacion()
+
   const maximizarMenuBusqueda = () => {
     setMenuBusquedaMinimizado(false)
-    setSidebarMinimizado(true)
   }
 
-  const maximizarSidebar = () => {
-    setSidebarMinimizado(false)
-    setMenuBusquedaMinimizado(true)
-  }
+  // Diferenciamos entre click en trampa existente y click en mapa vacío
+  const handleLocationSelect = async (lat: number, lng: number, address: string, id?: number) => {
+    if (id) {
+      // 👉 click en trampa existente → abrir sidebar
+      const trampa = mosquitoData.find((t) => t.id === id)
+      if (trampa) {
+        setSelectedTrampa(trampa)
+        setSelectedLocation({
+          id: trampa.id,
+          address: trampa.location.address,
+          lat: trampa.location.lat,
+          lng: trampa.location.lng,
+          ubicacion: trampa.ubicacion ?? null,
+        })
+        setShowFormulario(false)
+        setInformeEditando(null)
+        setReverseActive(true)
+      }
+    } else {
+      // 👉 click en mapa vacío → procesar nueva dirección
+      setSelectedTrampa(null)
+      setSelectedLocation(null)
 
-  const handleLocationSelect = (lat: number, lng: number, address: string, id?: number) => {
-    const match = Array.isArray(mosquitoData)
-      ? mosquitoData.find((t) => t.id === id)
-      : undefined
+      const ok = await procesarDireccion(
+        guardarUbicacion,
+        lat,
+        lng,
+        () => {}, // setFueraMapa si querés manejarlo
+        pedirConfirmacion,
+        () => setReverseActive(true)
+      )
 
-    const fallbackTrampa = {
-      id: id ?? undefined, // ✅ no usar 0
-      location: { address, lat, lng },
-      ubicacion: null,
-      traps: { ovi: false, adulto: false },
+      if (ok) {
+        const trampa = {
+          id: undefined,
+          location: { address, lat, lng },
+          ubicacion: null,
+          traps: { ovi: false, adulto: false },
+        }
+        setSelectedTrampa(trampa)
+        setSelectedLocation({
+          id: trampa.id,
+          address: trampa.location.address,
+          lat: trampa.location.lat,
+          lng: trampa.location.lng,
+          ubicacion: trampa.ubicacion ?? null,
+        })
+        setShowFormulario(false)
+        setInformeEditando(null)
+        setReverseActive(true)
+      }
     }
-
-    const trampa = match || fallbackTrampa
-
-    setSelectedTrampa(trampa)
-    setSelectedLocation({
-      id: trampa.id, // ✅ ahora guardamos el id real
-      address: trampa.location.address,
-      lat: trampa.location.lat,
-      lng: trampa.location.lng,
-      ubicacion: trampa.ubicacion ?? null,
-    })
-    setShowFormulario(false)
-    setInformeEditando(null)
-    maximizarSidebar()
   }
 
   const handleGuardarInforme = async (nuevo: Partial<Informe>) => {
@@ -127,6 +150,7 @@ export function MapaMapa({
       setShowFormulario(false)
       setInformeEditando(null)
       await recargarInformes()
+      setReverseActive(true)
     }
   }
 
@@ -145,38 +169,51 @@ export function MapaMapa({
           onToggle={setReverseActive}
           guardarUbicacion={guardarUbicacion}
           selectedLocation={selectedLocation}
+          onLocationSelect={(lat, lng, address) => {
+            handleLocationSelect(lat, lng, address, undefined)
+          }}
+          onCerrarSidebar={() => {
+            setSelectedTrampa(null)
+            setSelectedLocation(null)
+          }}
         />
       </div>
+
+{/* Barra de búsqueda de direcciones */}
+{!shouldHideElemento(userRol, 'buscar-direcciones') && !menuBusquedaMinimizado && (
+  <div className="absolute top-4 right-4 z-[50] w-80 bg-white/95 backdrop-blur-sm border shadow-lg p-4 rounded-lg">
+    <BuscarDirecciones
+      onLocationSelect={(lat, lng, address) => {
+        handleLocationSelect(lat, lng, address, undefined)
+      }}
+      onFlyTo={(lat, lng) => {
+        setFlyToRequest({ lat, lng })
+      }}
+      onMinimizar={() => setMenuBusquedaMinimizado(true)}
+    />
+  </div>
+)}
+
+
+
 
       <MapComponent
         selectedLocation={selectedLocation}
         mosquitoData={mosquitoData}
-        onLocationSelect={(lat, lng, address, id) => {
-          handleLocationSelect(lat, lng, address, id)
-        }}
+        onLocationSelect={handleLocationSelect}
         reverseActive={reverseActive}
         modoEdicionPin={modoEdicionPin}
         posicionEditada={posicionEditada}
         setPosicionEditada={setPosicionEditada}
         guardarUbicacion={guardarUbicacion}
         flyToRequest={flyToRequest}
+        onReverseComplete={() => setReverseActive(true)}
       />
 
-      {!menuBusquedaMinimizado && !shouldHideElemento(userRol, 'buscar-direcciones') && (
-        <div className="absolute top-4 right-4 z-[100] w-80 bg-white/95 backdrop-blur-sm border shadow-lg p-4 rounded-lg">
-          <BuscarDirecciones
-            onLocationSelect={(lat, lng, address) => {
-              handleLocationSelect(lat, lng, address) // ✅ sin id=0
-            }}
-            onFlyTo={(lat, lng) => {
-              setFlyToRequest({ lat, lng })
-            }}
-            onMinimizar={() => setMenuBusquedaMinimizado(true)}
-          />
-        </div>
-      )}
+      {Modal}
 
-      {selectedTrampa && !showFormulario && !sidebarMinimizado && !shouldHideElemento(userRol, 'sidebar-informes') && (
+      {/* SidebarInformes */}
+      {selectedTrampa && !showFormulario && !shouldHideElemento(userRol, 'sidebar-informes') && (
         <div className="absolute top-4 right-4 z-[100] w-80">
           <SidebarInformes
             trampaId={selectedTrampa.id}
@@ -202,12 +239,17 @@ export function MapaMapa({
                 await recargarTrampas()
                 setSelectedTrampa(null)
                 setSelectedLocation(null)
+                setReverseActive(true)
               } else {
                 alert('❌ No se pudo eliminar el pin.')
               }
             }}
             onGuardarUbicacion={guardarUbicacion}
-            onMinimizar={() => setSidebarMinimizado(true)}
+            onCerrar={() => {
+              setSelectedTrampa(null)
+              setSelectedLocation(null)
+              setReverseActive(true)
+            }}
             modoEdicionPin={modoEdicionPin}
             setModoEdicionPin={setModoEdicionPin}
             ubicacion={selectedTrampa.ubicacion}
@@ -215,7 +257,8 @@ export function MapaMapa({
         </div>
       )}
 
-        {!showFormulario && menuBusquedaMinimizado && sidebarMinimizado && (
+      {/* Botón para reabrir búsqueda */}
+      {!showFormulario && menuBusquedaMinimizado && (
         <div className="absolute top-4 right-4 z-[100] flex flex-col gap-3 items-end">
           {!shouldHideElemento(userRol, 'buscar-direcciones') && (
             <Button
@@ -224,24 +267,14 @@ export function MapaMapa({
               onClick={maximizarMenuBusqueda}
               className="relative text-green-900 hover:bg-green-100 border border-green-400 shadow-[0_0_8px_2px_rgba(0,255,0,0.6)] transition-transform duration-300 ease-in-out hover:scale-110"
               title="Direcciones"
-            >
-              <ChevronRight className="h-5 w-5" />
-            </Button>
-          )}
-          {!shouldHideElemento(userRol, 'sidebar-informes') && (
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={maximizarSidebar}
-              className="relative text-green-900 hover:bg-green-100 border border-green-400 shadow-[0_0_8px_2px_rgba(0,255,0,0.6)] transition-transform duration-300 ease-in-out hover:scale-110"
-              title="Informes"
+              type="button"
             >
               <ChevronRight className="h-5 w-5" />
             </Button>
           )}
         </div>
-      )}
-
+      )}	
+      {/* Formulario de informes */}
       {selectedTrampa && showFormulario && !shouldHideElemento(userRol, 'Informes-Trampas') && (
         <div className="absolute inset-0 z-[100] bg-black/50 flex items-center justify-center">
           <div className="w-[88vw] max-w-3xl max-h-[90vh] overflow-auto p-6 bg-white rounded-lg shadow-xl">

@@ -212,3 +212,20 @@ El flujo quedó modular pero sólido: cada archivo cumple su rol y se comunica b
 En pocas palabras: el bug era que el id no llegaba al mapa, lo corregimos pasando siempre el id real desde MapaMapa y evitando id=0.
 ----------------------------------------------------------------------------------------------------------------
 Día 4/12
+Autocompletado en BuscarDirecciones.tsx
+Antes aparecían las calles con altura (ej: Avenida Fondo de la Legua 240).
+Lo ajustamos para que en el autocompletado se muestre solo el nombre de la calle, sin la altura.
+Además, transformamos las sugerencias a mayúsculas con .toUpperCase().
+SidebarInformes.tsx
+En la sección de dirección, cuando no estás editando, ahora se muestra la dirección en mayúsculas.
+El input de edición sigue mostrando el texto tal cual lo escribís, para que no moleste al tipear.
+MapComponent.tsx
+En los popups de los pins (azul, temporal y trampas), la calle se muestra en mayúsculas.
+La descripción se mantiene tal cual, sin forzar mayúsculas.
+BotonReverse.tsx
+Ajuste la lógica para que, después de colocar una trampa, el botón vuelva automáticamente a azul (modo zoom).
+Así evitamos que queden múltiples trampas si hacés varios clicks por error.
+Resultado general
+Todas las calles ahora se ven en mayúsculas en autocompletado, informes y popups.
+El botón reverse alterna entre azul (zoom) y rojo (colocar trampa), pero tras colocar una trampa vuelve solo a azul.
+Flujo más seguro: un click = una trampa, y después vuelve a zoom.

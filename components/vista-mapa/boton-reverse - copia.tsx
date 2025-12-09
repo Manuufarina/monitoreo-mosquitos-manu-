@@ -2,7 +2,7 @@
 
 import { MapPin } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { procesarDireccion } from '@/components/vista-mapa/LogicaDirecciones'
+import { procesarDireccion, useConfirmacion } from '@/components/vista-mapa/LogicaDirecciones'
 import { CartelFueraMapa } from '@/components/map-component'
 import { useState } from 'react'
 
@@ -28,6 +28,7 @@ export function BotonReverse({
   onLocationSelect,
 }: BotonReverseProps) {
   const [fueraMapa, setFueraMapa] = useState(false)
+  const { pedirConfirmacion, Modal } = useConfirmacion()
 
   const handleClick = async () => {
     const nextState = !reverseActive
@@ -39,11 +40,12 @@ export function BotonReverse({
         guardarUbicacion,
         selectedLocation.lat,
         selectedLocation.lng,
-        setFueraMapa
+        setFueraMapa,
+        pedirConfirmacion,
+        () => onToggle(true) // 👈 reset automático a azul
       )
 
       if (ok) {
-        // ✅ Seleccionamos también la ubicación con descripción
         onLocationSelect(
           selectedLocation.lat,
           selectedLocation.lng,
@@ -71,6 +73,7 @@ export function BotonReverse({
       </Button>
 
       {fueraMapa && <CartelFueraMapa />}
+      {Modal}
     </>
   )
 }

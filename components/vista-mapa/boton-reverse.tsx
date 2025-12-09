@@ -18,6 +18,7 @@ interface BotonReverseProps {
   ) => Promise<boolean>
   selectedLocation: { address: string; lat: number; lng: number; ubicacion?: string } | null
   onLocationSelect: (lat: number, lng: number, address: string, ubicacion?: string) => void
+  onCerrarSidebar: () => void   // 👈 nueva prop para cerrar sidebar y limpiar selección
 }
 
 export function BotonReverse({
@@ -26,33 +27,47 @@ export function BotonReverse({
   guardarUbicacion,
   selectedLocation,
   onLocationSelect,
+  onCerrarSidebar,
 }: BotonReverseProps) {
   const [fueraMapa, setFueraMapa] = useState(false)
   const { pedirConfirmacion, Modal } = useConfirmacion()
+  const [cooldown, setCooldown] = useState(false)
 
   const handleClick = async () => {
+    if (cooldown) return // 👈 si está en cooldown, no hace nada
+
     const nextState = !reverseActive
     onToggle(nextState)
 
+    // 👇 si lo pasamos a rojo, cerramos sidebar, limpiamos selección y activamos cooldown
+    if (!reverseActive) {
+      onCerrarSidebar() // 👈 cerrar SidebarInformes y limpiar selectedLocation
+      setCooldown(true)
+      setTimeout(() => setCooldown(false), 3000)
+    }
+
     // 👇 Cuando pasamos de modo zoom a modo pin azul
     if (!nextState && selectedLocation) {
-      const ok = await procesarDireccion(
-        guardarUbicacion,
-        selectedLocation.lat,
-        selectedLocation.lng,
-        setFueraMapa,
-        pedirConfirmacion   // 👈 ahora usamos el modal React
-      )
-
-      if (ok) {
-        // ✅ Seleccionamos también la ubicación con descripción
-        onLocationSelect(
+      // 👇 esperar un tick para que React cierre el sidebar antes de mostrar el cartel
+      setTimeout(async () => {
+        const ok = await procesarDireccion(
+          guardarUbicacion,
           selectedLocation.lat,
           selectedLocation.lng,
-          selectedLocation.address,
-          selectedLocation.ubicacion ?? null
+          setFueraMapa,
+          pedirConfirmacion,
+          () => onToggle(true) // 👈 reset automático a azul
         )
-      }
+
+        if (ok) {
+          onLocationSelect(
+            selectedLocation.lat,
+            selectedLocation.lng,
+            selectedLocation.address,
+            selectedLocation.ubicacion ?? null
+          )
+        }
+      }, 0)
     }
   }
 
@@ -62,6 +77,7 @@ export function BotonReverse({
         variant="ghost"
         size="icon"
         onClick={handleClick}
+        disabled={cooldown} // 👈 deshabilitado durante cooldown
         className={`h-6 w-6 p-0 rounded-full border ${
           reverseActive
             ? 'bg-blue-500 text-white border-blue-600'
@@ -73,7 +89,7 @@ export function BotonReverse({
       </Button>
 
       {fueraMapa && <CartelFueraMapa />}
-      {Modal} {/* 👈 monta el modal si hay confirmación pendiente */}
+      {Modal}
     </>
   )
 }

@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import { Label } from '@/components/ui/label'
 import { Button } from '@/components/ui/button'
-import { ChevronLeft, Crosshair, Trash2, Edit3, FileText } from 'lucide-react'
+import { X, Crosshair, Trash2, Edit3, FileText } from 'lucide-react'
 import { ConfirmacionModal } from '@/components/ui/ConfirmacionModal'
 import { useActualizar } from '@/hooks/useActualizar'
 
@@ -35,11 +35,10 @@ interface SidebarInformesProps {
   onEditarInforme: (informe: Informe) => void
   onEliminarInforme: (id: number) => void
   onEliminarPin: (direccion: string) => Promise<void> | void
-  onMinimizar: () => void
+  onCerrar: () => void   // 👈 cambiamos la prop: antes era onMinimizar
   modoEdicionPin: boolean
   setModoEdicionPin: (estado: boolean) => void
   ubicacion?: string
-  // 👇 nueva prop para recibir coords editadas desde el mapa
   posicionEditada?: { lat: number; lng: number } | null
 }
 
@@ -56,7 +55,7 @@ export function SidebarInformes({
   onEditarInforme,
   onEliminarInforme,
   onEliminarPin,
-  onMinimizar,
+  onCerrar,
   modoEdicionPin,
   setModoEdicionPin,
   ubicacion = '',
@@ -157,7 +156,6 @@ export function SidebarInformes({
     }
   }
 
-  // 👇 nuevo: guardar posición si hay coords editadas
   useEffect(() => {
     if (modoEdicionPin && posicionEditada) {
       handleGuardarPosicion(posicionEditada.lat, posicionEditada.lng)
@@ -176,14 +174,17 @@ export function SidebarInformes({
 
   return (
     <div className="bg-white rounded-lg shadow-md p-4 space-y-4 relative">
+      {/* Botón de cerrar en vez de minimizar */}
       <div className="absolute top-2 right-2">
         <Button
           variant="ghost"
           size="icon"
-          onClick={onMinimizar}
-          className="text-green-900 hover:bg-green-100"
+          onClick={onCerrar}
+          className="text-red-600 hover:bg-red-100"
+          title="Cerrar sidebar informes"
+          type="button"
         >
-          <ChevronLeft className="h-4 w-4" />
+          <X className="h-4 w-4" />
         </Button>
       </div>
 
@@ -212,7 +213,7 @@ export function SidebarInformes({
             className="text-sm border rounded px-2 py-1 w-full"
           />
         ) : (
-          <p className="text-sm text-muted-foreground">{direccionEditable}</p>
+          <p className="text-sm text-muted-foreground">{direccionEditable?.toUpperCase()}</p>
         )}
 
         <Button
@@ -235,7 +236,6 @@ export function SidebarInformes({
           Descripción
         </Button>
 
-         {/* menú tipo block de notas flotante */}
         {editandoDescripcion && (
           <div
             className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50"

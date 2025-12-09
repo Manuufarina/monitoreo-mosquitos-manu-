@@ -39,7 +39,7 @@ export function BuscarDirecciones({ onLocationSelect, onFlyTo, onMinimizar }: Bu
             calle = partes.join(' ')
           }
 
-          return calle
+          return calle.toUpperCase()
         })
         .filter(Boolean)
     )
@@ -83,7 +83,8 @@ export function BuscarDirecciones({ onLocationSelect, onFlyTo, onMinimizar }: Bu
       coords.lat,
       coords.lng,
       setFueraMapa,
-      pedirConfirmacion
+      pedirConfirmacion,
+      () => {} // 👈 en BuscarDirecciones no necesitamos resetear botón, pero mantenemos la firma
     )
 
     if (ok) {

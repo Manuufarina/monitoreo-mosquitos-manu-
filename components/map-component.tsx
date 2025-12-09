@@ -54,15 +54,7 @@ export const CartelFueraMapa: React.FC = () => {
 interface MapComponentProps {
   selectedLocation: { id?: number; address: string; lat: number; lng: number; ubicacion?: string } | null
   mosquitoData: any[]
-  informesPorDireccion?: Record<string, any[]>
   onLocationSelect?: (lat: number, lng: number, address: string, id?: number) => void
-  guardarUbicacion?: (
-    direccion: string,
-    lat: number,
-    lng: number,
-    traps: { ovi: boolean; adulto: boolean },
-    ubicacion?: string
-  ) => Promise<boolean>
   modoEdicionPin?: boolean
   posicionEditada?: { lat: number; lng: number } | null
   setPosicionEditada?: (pos: { lat: number; lng: number }) => void
@@ -73,9 +65,7 @@ interface MapComponentProps {
 export function MapComponent({
   selectedLocation,
   mosquitoData = [],
-  informesPorDireccion,
   onLocationSelect,
-  guardarUbicacion,
   modoEdicionPin = false,
   posicionEditada,
   setPosicionEditada,
@@ -83,7 +73,6 @@ export function MapComponent({
   flyToRequest,
 }: MapComponentProps) {
   const [tempPin, setTempPin] = useState<{ lat: number; lng: number; address: string } | null>(null)
-  const [fueraMapa, setFueraMapa] = useState(false)
 
   const { actualizarPosicion } = useActualizar()
 
@@ -100,47 +89,14 @@ export function MapComponent({
 
   function ClickHandler() {
     useMapEvents({
-      click: async (e) => {
+      click: (e) => {
         const { lat, lng } = e.latlng
         if (reverseActive) {
           e.target.setView([lat, lng], 18)
         } else {
+          // 👇 click en mapa vacío → nuevo pin
           setTempPin({ lat, lng, address: 'Buscando dirección...' })
-          try {
-            const res = await fetch(
-              `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&addressdetails=1`,
-              { headers: { 'Accept-Language': 'es' } }
-            )
-            const data = await res.json()
-            const addressObj = data.address
-
-            if (!addressObj || !esZonaValida(addressObj)) {
-              setTempPin({ lat, lng, address: '⚠️ Dirección fuera del municipio' })
-              setFueraMapa(true)
-              return
-            }
-
-            const street =
-              addressObj.road ||
-              addressObj.pedestrian ||
-              addressObj.street ||
-              'Calle desconocida'
-            const number = addressObj.house_number || 'S/N'
-            const fullAddress = `${street} ${number}, ${addressObj.suburb || addressObj.city || ''}`
-
-            setTempPin({ lat, lng, address: fullAddress })
-            setFueraMapa(false)
-
-            // ❌ no pasar id=0 — deja undefined para nuevas ubicaciones
-            if (onLocationSelect) onLocationSelect(lat, lng, fullAddress)
-
-            if (guardarUbicacion) {
-              await guardarUbicacion(fullAddress, lat, lng, { ovi: false, adulto: false }, '')
-            }
-          } catch (err) {
-            console.error('Error en reverse geocoding:', err)
-            setTempPin({ lat, lng, address: 'Error al obtener dirección' })
-          }
+          onLocationSelect?.(lat, lng, 'Buscando dirección...', undefined)
         }
       },
     })
@@ -189,20 +145,17 @@ export function MapComponent({
                   const pos = marker.getLatLng()
                   setPosicionEditada?.({ lat: pos.lat, lng: pos.lng })
 
-                  // Guardar solo si hay id válido y el modo edición está activo
                   const id = selectedLocation?.id
                   if (modoEdicionPin && id && id > 0) {
                     console.log('PATCH posición -> id:', id, 'lat:', pos.lat, 'lng:', pos.lng)
                     const ok = await actualizarPosicion(id, pos.lat, pos.lng)
                     alert(ok ? '✅ Posición actualizada en la base' : '❌ No se pudo actualizar la posición')
-                  } else {
-                    console.warn('dragend sin id válido o sin modoEdicionPin')
                   }
                 },
               }}
             >
               <Popup>
-                <strong>{selectedLocation.address}</strong>
+                <strong>{selectedLocation.address?.toUpperCase()}</strong>
                 <br />
                 {selectedLocation.ubicacion ?? 'Sin descripción'}
               </Popup>
@@ -226,7 +179,7 @@ export function MapComponent({
             const location = entry.location
             const lat = location?.lat
             const lng = location?.lng
-            const address = location?.address ?? 'Sin dirección'
+            const address = location?.address?.toUpperCase() ?? 'Sin dirección'
             const ubicacion = entry.ubicacion ?? location?.ubicacion ?? 'Sin descripción'
 
             if (typeof lat !== 'number' || typeof lng !== 'number') return null
@@ -238,9 +191,8 @@ export function MapComponent({
                 title={`${address}\n${ubicacion}`}
                 eventHandlers={{
                   click: () => {
-                    if (onLocationSelect) {
-                      onLocationSelect(lat, lng, address, entry.id)
-                    }
+                    // 👇 click en pin existente → abrir sidebar
+                    onLocationSelect?.(lat, lng, address, entry.id)
                   },
                 }}
               >
@@ -253,8 +205,6 @@ export function MapComponent({
             )
           })}
       </LeafletMap>
-
-      {fueraMapa && <CartelFueraMapa />}
     </>
   )
 }
