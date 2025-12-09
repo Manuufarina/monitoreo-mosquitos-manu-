@@ -2,13 +2,14 @@
   "name": "Monitoreo Mosquito SI",
   "version": "0.1.0",
   "private": true,
-  "type": "commonjs",
+  "type": "module",
   "scripts": {
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "crear-admin": "ts-node crear-admin.ts"
+    "crear-admin": "ts-node crear-admin.ts",
+    "vercel-build": "prisma generate && next build"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",
