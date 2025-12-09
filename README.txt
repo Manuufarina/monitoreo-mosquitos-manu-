@@ -214,8 +214,8 @@ En pocas palabras: el bug era que el id no llegaba al mapa, lo corregimos pasand
 Día 4/12
 Autocompletado en BuscarDirecciones.tsx
 Antes aparecían las calles con altura (ej: Avenida Fondo de la Legua 240).
-Lo ajustamos para que en el autocompletado se muestre solo el nombre de la calle, sin la altura.
-Además, transformamos las sugerencias a mayúsculas con .toUpperCase().
+Lo ajuste para que en el autocompletado se muestre solo el nombre de la calle, sin la altura.
+Además, transforme las sugerencias a mayúsculas con .toUpperCase().
 SidebarInformes.tsx
 En la sección de dirección, cuando no estás editando, ahora se muestra la dirección en mayúsculas.
 El input de edición sigue mostrando el texto tal cual lo escribís, para que no moleste al tipear.
@@ -229,3 +229,9 @@ Resultado general
 Todas las calles ahora se ven en mayúsculas en autocompletado, informes y popups.
 El botón reverse alterna entre azul (zoom) y rojo (colocar trampa), pero tras colocar una trampa vuelve solo a azul.
 Flujo más seguro: un click = una trampa, y después vuelve a zoom.
+----------------------------------------------------------------------------------------------------------------
+Día 5/12
+Hice ajustes en MapaMapa.tsx para diferenciar correctamente el click en una trampa existente del click en el mapa vacío.
+pruebas con la barra de búsqueda de direcciones (BuscarDirecciones.tsx), verificando que al ingresar una calle y altura se abra el pin correspondiente o se cree uno nuevo si no existe.
+cambios en el orden de capas (z-index) para que el SidebarInformes quede por encima del menú de búsqueda.
+intentos de deploy en Vercel, configurando el flujo para que el proyecto se pueda publicar online.
