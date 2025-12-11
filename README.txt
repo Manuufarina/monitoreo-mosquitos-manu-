@@ -235,3 +235,23 @@ Hice ajustes en MapaMapa.tsx para diferenciar correctamente el click en una tram
 pruebas con la barra de búsqueda de direcciones (BuscarDirecciones.tsx), verificando que al ingresar una calle y altura se abra el pin correspondiente o se cree uno nuevo si no existe.
 cambios en el orden de capas (z-index) para que el SidebarInformes quede por encima del menú de búsqueda.
 intentos de deploy en Vercel, configurando el flujo para que el proyecto se pueda publicar online.
+----------------------------------------------------------------------------------------------------------------
+Día 9/12
+ntente trabajar con Prisma 7.1.0:
+Ajuste tu package.json y corrí pnpm install.
+encontre con errores de validación (P1012) porque Prisma 7 ya no acepta url dentro del datasource.
+Corregí tu schema.prisma quitando el url y pasándolo al .env.
+Generé el cliente con pnpm prisma generate, pero aparecieron errores nuevos relacionados con el motor “client engine” (adapter o accelerateUrl).
+Probé tus endpoints (/api/trampas, /api/informes):
+Seguían devolviendo 500 porque el cliente no se inicializaba bien.
+Conclusión del día: avance en entender los cambios de Prisma 7, pero todavía no tenías la base funcionando.
+----------------------------------------------------------------------------------------------------------------
+Día 10/12
+10 de diciembre
+Decidí volver a Prisma 6.19.0, la versión que ya te había funcionado:
+Cambie las dependencias en package.json a "@prisma/client": "6.19.0" y "prisma": "6.19.0".
+Reinstale con pnpm install.
+Regenere el cliente con pnpm prisma generate.
+ya anda la base de datos y corre pnpm dev
+----------------------------------------------------------------------------------------------------------------
+Día 11/12
