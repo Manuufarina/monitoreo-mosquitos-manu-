@@ -5,31 +5,21 @@ export async function POST(request: Request) {
   try {
     const { usuario, correo } = await request.json()
 
-    // Validación básica de entrada
-    if (
-      !usuario ||
-      !correo ||
-      typeof usuario !== 'string' ||
-      typeof correo !== 'string'
-    ) {
+    if (!usuario || !correo) {
       return NextResponse.json({ error: 'Datos inválidos' }, { status: 400 })
     }
 
-    // Buscar usuario en la base por nombre o id/email
+    const isEmail = usuario.includes('@')
     const encontrado = await prisma.usuario.findFirst({
-      where: {
-        OR: [
-          { nombre: usuario.trim() },
-          { email: usuario.trim() }
-        ]
-      }
+      where: isEmail
+        ? { email: usuario.trim() }
+        : { nombre: usuario.trim() }
     })
 
     if (!encontrado) {
       return NextResponse.json({ error: 'Usuario no encontrado' }, { status: 404 })
     }
 
-    // Validar que el correo no esté ya en uso
     const existeCorreo = await prisma.usuario.findUnique({
       where: { email: correo.trim() }
     })
@@ -37,9 +27,8 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Correo ya en uso' }, { status: 409 })
     }
 
-    // Actualizar el correo del usuario
     await prisma.usuario.update({
-      where: { id: encontrado.id },
+      where: { id: encontrado.id }, // ✅ id es string ObjectId
       data: { email: correo.trim() }
     })
 

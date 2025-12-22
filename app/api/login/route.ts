@@ -5,31 +5,24 @@ export async function POST(request: Request) {
   try {
     const body = await request.json()
     const usuario = body.usuario
-    // aceptar tanto "contraseña" como "password"
     const password = body.contraseña || body.password
 
-    // Validación básica de entrada
-    if (!usuario || !password || typeof usuario !== 'string' || typeof password !== 'string') {
+    if (!usuario || !password) {
       return NextResponse.json({ success: false, error: 'Datos inválidos' }, { status: 400 })
     }
 
-    // Buscar usuario en la base por email o nombre
+    const isEmail = usuario.includes('@')
     const encontrado = await prisma.usuario.findFirst({
-      where: {
-        OR: [
-          { email: usuario.trim() },
-          { nombre: usuario.trim() }
-        ]
-      },
-      include: { rango: true } // traer el rango asociado
+      where: isEmail
+        ? { email: usuario.trim() }
+        : { nombre: usuario.trim() },
+      include: { rango: true }
     })
 
-    // Validar credenciales (si querés validar contraseña)
     if (!encontrado || encontrado.password !== password.trim()) {
       return NextResponse.json({ success: false, error: 'Credenciales inválidas' }, { status: 401 })
     }
 
-    // Responder con éxito y rol
     return NextResponse.json({
       success: true,
       usuario: encontrado.nombre,

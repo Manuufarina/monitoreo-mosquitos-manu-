@@ -1,12 +1,12 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 
-// GET: listar todas las trampas
+// ✅ GET: listar todas las trampas con sus informes
 export async function GET() {
   try {
     const trampas = await prisma.trampa.findMany({
-      include: { informes: true }, // opcional: traer informes asociados
-      orderBy: { id: 'asc' }
+      include: { informes: true },
+      orderBy: { creadoEn: 'asc' },
     })
     return NextResponse.json({ success: true, trampas })
   } catch (error) {
@@ -15,7 +15,7 @@ export async function GET() {
   }
 }
 
-// POST: crear una nueva trampa
+// ✅ POST: crear una nueva trampa
 export async function POST(req: Request) {
   try {
     const body = await req.json()
@@ -23,19 +23,27 @@ export async function POST(req: Request) {
     const lat = body.lat
     const lng = body.lng
     const ubicacion = body.ubicacion?.trim() || null
+    const ovi = typeof body.traps?.ovi === 'boolean' ? body.traps.ovi : undefined
+    const adulto = typeof body.traps?.adulto === 'boolean' ? body.traps.adulto : undefined
 
     if (!address || typeof lat !== 'number' || typeof lng !== 'number') {
       return NextResponse.json({ error: 'Faltan datos válidos' }, { status: 400 })
     }
 
-    // Validar duplicado por dirección
     const existente = await prisma.trampa.findFirst({ where: { direccion: address } })
     if (existente) {
       return NextResponse.json({ error: 'Trampa ya existe en esa dirección' }, { status: 409 })
     }
 
     await prisma.trampa.create({
-      data: { direccion: address, lat, lng, ubicacion }
+      data: {
+        direccion: address,
+        lat,
+        lng,
+        ubicacion,
+        ...(ovi !== undefined ? { ovi } : {}),
+        ...(adulto !== undefined ? { adulto } : {}),
+      },
     })
 
     return NextResponse.json({ success: true })
@@ -45,7 +53,7 @@ export async function POST(req: Request) {
   }
 }
 
-// DELETE: eliminar trampa por dirección
+// ✅ DELETE: eliminar trampa por dirección
 export async function DELETE(req: Request) {
   try {
     const body = await req.json()
@@ -63,21 +71,24 @@ export async function DELETE(req: Request) {
   }
 }
 
-// PATCH: actualizar lat/lng, dirección o ubicacion de una trampa
+// ✅ PATCH: actualizar dirección, ubicación o coordenadas de una trampa
 export async function PATCH(req: Request) {
   try {
     const body = await req.json()
-    const id = body.id
+    const id = body.id as string
+    const nuevaDireccion = body.nuevaDireccion?.trim()?.toLowerCase()
+    const nuevaUbicacion = body.nuevaUbicacion?.trim()
     const nuevaLat = body.nuevaLat
     const nuevaLng = body.nuevaLng
-    const nuevaDireccion = body.nuevaDireccion?.trim().toLowerCase()
-    const nuevaUbicacion = body.nuevaUbicacion?.trim()
+    const nuevoOvi = body.nuevoOvi
+    const nuevoAdulto = body.nuevoAdulto
 
     if (!id) {
       return NextResponse.json({ error: 'Falta id de la trampa' }, { status: 400 })
     }
 
-    const data: any = {}
+    const data: Record<string, any> = {}
+
     if (typeof nuevaLat === 'number' && typeof nuevaLng === 'number') {
       data.lat = nuevaLat
       data.lng = nuevaLng
@@ -88,14 +99,20 @@ export async function PATCH(req: Request) {
     if (nuevaUbicacion) {
       data.ubicacion = nuevaUbicacion
     }
+    if (typeof nuevoOvi === 'boolean') {
+      data.ovi = nuevoOvi
+    }
+    if (typeof nuevoAdulto === 'boolean') {
+      data.adulto = nuevoAdulto
+    }
 
     if (Object.keys(data).length === 0) {
       return NextResponse.json({ error: 'No hay datos válidos para actualizar' }, { status: 400 })
     }
 
     await prisma.trampa.update({
-      where: { id: Number(id) },
-      data
+      where: { id },
+      data,
     })
 
     return NextResponse.json({ success: true })

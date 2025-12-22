@@ -5,19 +5,11 @@ export async function POST(request: Request) {
   try {
     const { usuario, passwordActual, passwordNueva } = await request.json()
 
-    // Validación básica de entrada
-    if (
-      !usuario ||
-      !passwordActual ||
-      !passwordNueva ||
-      typeof usuario !== 'string' ||
-      typeof passwordActual !== 'string' ||
-      typeof passwordNueva !== 'string'
-    ) {
+    if (!usuario || !passwordActual || !passwordNueva) {
       return NextResponse.json({ error: 'Faltan campos obligatorios' }, { status: 400 })
     }
 
-    // Buscar usuario en la base por email o nombre
+    // Buscar usuario por email o nombre
     const encontrado = await prisma.usuario.findFirst({
       where: {
         OR: [
@@ -38,7 +30,7 @@ export async function POST(request: Request) {
 
     // Actualizar contraseña
     await prisma.usuario.update({
-      where: { id: encontrado.id },
+      where: { id: encontrado.id }, // ✅ id es string ObjectId
       data: { password: passwordNueva.trim() }
     })
 

@@ -3,8 +3,8 @@
 import { createContext, useEffect, useState } from 'react'
 
 interface Informe {
-  id?: number
-  trampaId: number
+  id?: string
+  trampaId: string
   fecha: string
   tipos: ('ovi' | 'adultos')[]
   cantidades?: {
@@ -27,10 +27,10 @@ interface ActualizarContextType {
     ubicacion?: string
   ) => Promise<boolean>
   crearInforme: (nuevo: Informe, informeAnterior?: Informe) => Promise<boolean>
-  eliminarInforme: (id: number) => Promise<boolean>
+  eliminarInforme: (id: string) => Promise<boolean>
   eliminarPin: (direccion: string) => Promise<boolean>
-  actualizarPosicion: (trampaId: number, nuevaLat: number, nuevaLng: number) => Promise<boolean>
-  actualizarDescripcion: (trampaId: number, nuevaUbicacion: string) => Promise<boolean>
+  actualizarPosicion: (trampaId: string, nuevaLat: number, nuevaLng: number) => Promise<boolean>
+  actualizarDescripcion: (trampaId: string, nuevaUbicacion: string) => Promise<boolean>
   selectedTrampa: any | null
   setSelectedTrampa: (trampa: any | null) => void
 }
@@ -50,7 +50,7 @@ export function ActualizarProvider({ children }: { children: React.ReactNode }) 
 
       setTrampas(
         trampasRaw.map((t: any) => ({
-          id: t.id,
+          id: t.id, // 👈 mantener como string
           location: {
             address: t.direccion,
             lat: Number(t.lat),
@@ -128,7 +128,7 @@ export function ActualizarProvider({ children }: { children: React.ReactNode }) 
     return false
   }
 
-  const eliminarInforme = async (id: number): Promise<boolean> => {
+  const eliminarInforme = async (id: string): Promise<boolean> => {
     try {
       const res = await fetch('/api/informes', {
         method: 'DELETE',
@@ -172,7 +172,7 @@ export function ActualizarProvider({ children }: { children: React.ReactNode }) 
   }
 
   const actualizarPosicion = async (
-    trampaId: number,
+    trampaId: string,
     nuevaLat: number,
     nuevaLng: number
   ): Promise<boolean> => {
@@ -180,7 +180,7 @@ export function ActualizarProvider({ children }: { children: React.ReactNode }) 
       const res = await fetch('/api/trampas', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id: trampaId, nuevaLat, nuevaLng }), // 👈 usar id
+        body: JSON.stringify({ id: trampaId, nuevaLat, nuevaLng }),
       })
       const result = await res.json()
       if (result.success) {
@@ -200,14 +200,14 @@ export function ActualizarProvider({ children }: { children: React.ReactNode }) 
   }
 
   const actualizarDescripcion = async (
-    trampaId: number,
+    trampaId: string,
     nuevaUbicacion: string
   ): Promise<boolean> => {
     try {
       const res = await fetch('/api/trampas', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id: trampaId, nuevaUbicacion }), // 👈 usar id
+        body: JSON.stringify({ id: trampaId, nuevaUbicacion }),
       })
       const result = await res.json()
       if (result.success) {

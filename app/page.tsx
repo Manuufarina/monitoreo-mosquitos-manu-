@@ -191,33 +191,35 @@ export default function Page() {
     return false
   }
 
-  // Actualizar posición
-  const handleActualizarPosicion = async (id: number, nuevaLat: number, nuevaLng: number) => {
-    const res = await fetch('/api/trampas', {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ id, nuevaLat, nuevaLng }),
-    })
-    if (res.ok) {
-      await recargarTrampas()
-      return true
-    }
-    return false
+// Actualizar posición
+const handleActualizarPosicion = async (id: string, nuevaLat: number, nuevaLng: number) => {
+  const res = await fetch('/api/trampas', {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ id, nuevaLat, nuevaLng }), // id como string
+  })
+  if (res.ok) {
+    await recargarTrampas()
+    return true
   }
+  return false
+}
+
 
   // Actualizar descripción
-  const handleActualizarDescripcion = async (id: number, nuevaDescripcion: string) => {
-    const res = await fetch('/api/trampas', {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ id, nuevaUbicacion: nuevaDescripcion }), // ✅ corregido
-    })
-    if (res.ok) {
-      await recargarTrampas()
-      return true
-    }
-    return false
+const handleActualizarDescripcion = async (id: string, nuevaDescripcion: string) => {
+  const res = await fetch('/api/trampas', {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ id, nuevaUbicacion: nuevaDescripcion }),
+  })
+  if (res.ok) {
+    await recargarTrampas()
+    return true
   }
+  return false
+}
+
 
   return (
     <div className="min-h-screen bg-background relative">

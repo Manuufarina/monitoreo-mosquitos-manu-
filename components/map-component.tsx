@@ -12,7 +12,6 @@ import L from 'leaflet'
 import { useEffect, useState } from 'react'
 import { CameraFlyTo } from '@/components/CameraFlyTo'
 import React from 'react'
-import { useActualizar } from '@/hooks/useActualizar'
 
 /* 🔎 Zonas permitidas en San Isidro */
 const zonasPermitidas = [
@@ -52,14 +51,15 @@ export const CartelFueraMapa: React.FC = () => {
 }
 
 interface MapComponentProps {
-  selectedLocation: { id?: number; address: string; lat: number; lng: number; ubicacion?: string } | null
+  selectedLocation: { id?: string; address: string; lat: number; lng: number; ubicacion?: string } | null
   mosquitoData: any[]
-  onLocationSelect?: (lat: number, lng: number, address: string, id?: number) => void
+  onLocationSelect?: (lat: number, lng: number, address: string, id?: string) => void
   modoEdicionPin?: boolean
   posicionEditada?: { lat: number; lng: number } | null
   setPosicionEditada?: (pos: { lat: number; lng: number }) => void
   reverseActive: boolean
   flyToRequest?: { lat: number; lng: number } | null
+  actualizarPosicion?: (id: string, nuevaLat: number, nuevaLng: number) => Promise<boolean>
 }
 
 export function MapComponent({
@@ -71,10 +71,9 @@ export function MapComponent({
   setPosicionEditada,
   reverseActive,
   flyToRequest,
+  actualizarPosicion,
 }: MapComponentProps) {
   const [tempPin, setTempPin] = useState<{ lat: number; lng: number; address: string } | null>(null)
-
-  const { actualizarPosicion } = useActualizar()
 
   useEffect(() => {
     delete L.Icon.Default.prototype._getIconUrl
@@ -145,11 +144,19 @@ export function MapComponent({
                   const pos = marker.getLatLng()
                   setPosicionEditada?.({ lat: pos.lat, lng: pos.lng })
 
-                  const id = selectedLocation?.id
-                  if (modoEdicionPin && id && id > 0) {
-                    console.log('PATCH posición -> id:', id, 'lat:', pos.lat, 'lng:', pos.lng)
-                    const ok = await actualizarPosicion(id, pos.lat, pos.lng)
-                    alert(ok ? '✅ Posición actualizada en la base' : '❌ No se pudo actualizar la posición')
+                  const id: string | undefined = selectedLocation?.id
+                  console.log('📍 dragend fired', { modoEdicionPin, id, lat: pos.lat, lng: pos.lng })
+
+                  if (modoEdicionPin && id && actualizarPosicion) {
+                    try {
+                      const ok = await actualizarPosicion(id, pos.lat, pos.lng)
+                      alert(ok ? '✅ Posición actualizada en la base' : '❌ No se pudo actualizar la posición')
+                    } catch (err) {
+                      console.error('❌ Error al actualizar posición:', err)
+                      alert('❌ Error inesperado al actualizar la posición')
+                    }
+                  } else {
+                    console.warn('⚠️ dragend no ejecutó actualización', { modoEdicionPin, id, actualizarPosicion })
                   }
                 },
               }}

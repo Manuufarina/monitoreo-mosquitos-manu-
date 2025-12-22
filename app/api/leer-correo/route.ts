@@ -9,14 +9,11 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Falta el nombre de usuario' }, { status: 400 })
     }
 
-    // Buscar usuario en la base por nombre o email
+    const isEmail = usuario.includes('@')
     const encontrado = await prisma.usuario.findFirst({
-      where: {
-        OR: [
-          { nombre: usuario.trim() },
-          { email: usuario.trim() }
-        ]
-      }
+      where: isEmail
+        ? { email: usuario.trim() }
+        : { nombre: usuario.trim() }
     })
 
     if (!encontrado || !encontrado.email) {

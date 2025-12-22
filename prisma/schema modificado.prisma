@@ -30,13 +30,13 @@ model Rango {
 model Trampa {
   id        String    @id @default(auto()) @map("_id") @db.ObjectId
   direccion String
-  lat       Float
-  lng       Float
-  ubicacion String?   // 👈 campo opcional para descripción de la ubicación
+  location  Json      // ✅ GeoJSON Point: { type: "Point", coordinates: [lng, lat] }
+  ubicacion String?
   creadoEn  DateTime  @default(now())
 
   informes  Informe[]
 }
+
 
 model Informe {
   id         String    @id @default(auto()) @map("_id") @db.ObjectId

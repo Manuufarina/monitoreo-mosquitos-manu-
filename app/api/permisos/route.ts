@@ -10,12 +10,11 @@ export const GET = async () => {
         nombre: true,
         email: true,
         creadoEn: true,
-        rango: { select: { nombre: true, reglas: true } } // 👈 en lugar de permisos
+        rango: { select: { nombre: true, reglas: true } }
       },
-      orderBy: { id: 'asc' }
+      orderBy: { creadoEn: 'asc' } // ✅ usar fecha en vez de id numérico
     })
 
-    // Si no hay usuarios, devolvemos un error
     if (!usuarios || usuarios.length === 0) {
       return NextResponse.json({ error: 'No hay usuarios registrados' }, { status: 404 })
     }

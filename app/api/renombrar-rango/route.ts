@@ -28,15 +28,9 @@ export async function POST(req: Request) {
     }
 
     // Renombrar el rango
-    const actualizado = await prisma.rango.update({
-      where: { id: rango.id },
+    await prisma.rango.update({
+      where: { id: rango.id }, // ✅ id es string ObjectId
       data: { nombre: nuevoNombre }
-    })
-
-    // Actualizar usuarios que tenían el rango original
-    await prisma.usuario.updateMany({
-      where: { rangoId: rango.id },
-      data: { rangoId: actualizado.id }
     })
 
     return NextResponse.json({ success: true })

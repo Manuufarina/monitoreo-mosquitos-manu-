@@ -1,12 +1,9 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 
-// Normaliza a fecha-día (UTC, sin hora) para que la unique funcione por día
 function toDateOnlyUTC(isoOrDate: string | Date) {
   const d = typeof isoOrDate === 'string' ? new Date(isoOrDate) : isoOrDate
-  // Fuerza a medianoche UTC
-  const dateOnly = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()))
-  return dateOnly
+  return new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()))
 }
 
 // GET: listar informes (opcionalmente filtrados por trampaId)
@@ -16,7 +13,7 @@ export async function GET(req: Request) {
     const trampaId = searchParams.get('trampaId')
 
     const informes = await prisma.informe.findMany({
-      where: trampaId ? { trampaId: Number(trampaId) } : {},
+      where: trampaId ? { trampaId } : {},
       orderBy: { fecha: 'desc' },
       include: { trampa: true },
       take: 200,
@@ -35,14 +32,7 @@ export async function POST(req: Request) {
     const body = await req.json()
     const { trampaId, fecha, tipos, cantidades, notas } = body
 
-    if (
-      !trampaId ||
-      !fecha ||
-      !Array.isArray(tipos) ||
-      tipos.length === 0 ||
-      !cantidades ||
-      typeof cantidades !== 'object'
-    ) {
+    if (!trampaId || !fecha || !Array.isArray(tipos) || tipos.length === 0 || !cantidades) {
       return NextResponse.json({ error: 'Faltan campos obligatorios' }, { status: 400 })
     }
 
@@ -68,8 +58,8 @@ export async function POST(req: Request) {
 
     const nuevo = await prisma.informe.create({
       data: {
-        trampaId: Number(trampaId),
-        fecha: fechaDia, // día UTC
+        trampaId,
+        fecha: fechaDia,
         tipos,
         cantidades: { ovi: cleanOvi, adultos: cleanAdultos },
         notas,
@@ -80,7 +70,7 @@ export async function POST(req: Request) {
   } catch (error: any) {
     if (error.code === 'P2002') {
       return NextResponse.json(
-        { error: 'Ya existe un informe para esa dirección en esa fecha.' },
+        { error: 'Ya existe un informe para esa trampa en esa fecha.' },
         { status: 400 }
       )
     }
@@ -120,10 +110,10 @@ export async function PUT(req: Request) {
     const fechaDia = toDateOnlyUTC(fecha)
 
     const actualizado = await prisma.informe.update({
-      where: { id: Number(id) },
+      where: { id },
       data: {
-        trampaId: Number(trampaId),
-        fecha: fechaDia, // día UTC
+        trampaId,
+        fecha: fechaDia,
         tipos,
         cantidades: { ovi: cleanOvi, adultos: cleanAdultos },
         notas,
@@ -134,7 +124,7 @@ export async function PUT(req: Request) {
   } catch (error: any) {
     if (error.code === 'P2002') {
       return NextResponse.json(
-        { error: 'Ya existe otro informe con esa fecha en esta dirección.' },
+        { error: 'Ya existe otro informe con esa fecha en esta trampa.' },
         { status: 400 }
       )
     }
@@ -154,7 +144,7 @@ export async function DELETE(req: Request) {
     }
 
     const eliminado = await prisma.informe.delete({
-      where: { id: Number(id) },
+      where: { id },
     })
 
     return NextResponse.json({ success: true, informe: eliminado })

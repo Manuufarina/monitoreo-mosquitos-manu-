@@ -12,8 +12,8 @@ import { MapComponent } from '@/components/map-component'
 import { procesarDireccion, useConfirmacion } from '@/components/vista-mapa/LogicaDirecciones'
 
 interface Informe {
-  id?: number
-  trampaId: number
+  id?: string
+  trampaId: string
   fecha: string
   tipos: ('ovi' | 'adultos')[]
   cantidades?: {
@@ -25,13 +25,13 @@ interface Informe {
 
 interface MapaMapaProps {
   trampas: any[]
-  informesPorTrampa: Record<number, Informe[]>
-  especiesPorTrampa: Record<number, { Aedes: number; Culex: number; Anopheles: number }>
+  informesPorTrampa: Record<string, Informe[]>
+  especiesPorTrampa: Record<string, { Aedes: number; Culex: number; Anopheles: number }>
   userRol: string
   recargarTrampas: () => Promise<void>
   recargarInformes: () => Promise<void>
   crearInforme: (nuevo: Partial<Informe>, informeAnterior?: Informe | null) => Promise<boolean>
-  eliminarInforme: (id: number) => Promise<boolean>
+  eliminarInforme: (id: string) => Promise<boolean>
   eliminarPin: (direccion: string) => Promise<boolean>
   guardarUbicacion: (
     direccion: string,
@@ -40,8 +40,10 @@ interface MapaMapaProps {
     traps: { ovi: boolean; adulto: boolean },
     ubicacion?: string
   ) => Promise<boolean>
-  actualizarPosicion: (id: number, nuevaLat: number, nuevaLng: number) => Promise<boolean>
+  actualizarPosicion: (id: string, nuevaLat: number, nuevaLng: number) => Promise<boolean> // 👈 agregar
 }
+
+
 
 export function MapaMapa({
   trampas,
@@ -54,7 +56,7 @@ export function MapaMapa({
   eliminarInforme,
   eliminarPin,
   guardarUbicacion,
-  actualizarPosicion,
+  actualizarPosicion, // 👈 agregar acá
 }: MapaMapaProps) {
   if (shouldHideElemento(userRol, 'mapa-mapa')) {
     return (
@@ -66,7 +68,7 @@ export function MapaMapa({
 
   const mosquitoData = trampas
 
-  const [selectedLocation, setSelectedLocation] = useState<{ id?: number; address: string; lat: number; lng: number; ubicacion?: string } | null>(null)
+  const [selectedLocation, setSelectedLocation] = useState<{ id?: string; address: string; lat: number; lng: number; ubicacion?: string } | null>(null)
   const [selectedTrampa, setSelectedTrampa] = useState<any | null>(null)
   const [tipoSeleccionado, setTipoSeleccionado] = useState<'ovi' | 'adultos' | null>(null)
   const [showFormulario, setShowFormulario] = useState(false)
@@ -85,9 +87,8 @@ export function MapaMapa({
   }
 
   // Diferenciamos entre click en trampa existente y click en mapa vacío
-  const handleLocationSelect = async (lat: number, lng: number, address: string, id?: number) => {
+  const handleLocationSelect = async (lat: number, lng: number, address: string, id?: string) => {
     if (id) {
-      // 👉 click en trampa existente → abrir sidebar
       const trampa = mosquitoData.find((t) => t.id === id)
       if (trampa) {
         setSelectedTrampa(trampa)
@@ -103,7 +104,6 @@ export function MapaMapa({
         setReverseActive(true)
       }
     } else {
-      // 👉 click en mapa vacío → procesar nueva dirección
       setSelectedTrampa(null)
       setSelectedLocation(null)
 
@@ -111,7 +111,7 @@ export function MapaMapa({
         guardarUbicacion,
         lat,
         lng,
-        () => {}, // setFueraMapa si querés manejarlo
+        () => {},
         pedirConfirmacion,
         () => setReverseActive(true)
       )
@@ -139,7 +139,7 @@ export function MapaMapa({
   }
 
   const handleGuardarInforme = async (nuevo: Partial<Informe>) => {
-    const trampaId = selectedTrampa?.id ?? 0
+    const trampaId = selectedTrampa?.id ?? ''
     if (!trampaId) {
       alert('❌ No se pudo determinar la trampa para guardar el informe.')
       return
@@ -154,7 +154,7 @@ export function MapaMapa({
     }
   }
 
-  const handleEliminarInforme = async (id: number) => {
+  const handleEliminarInforme = async (id: string) => {
     const ok = await eliminarInforme(id)
     if (ok) {
       await recargarInformes()
@@ -179,23 +179,20 @@ export function MapaMapa({
         />
       </div>
 
-{/* Barra de búsqueda de direcciones */}
-{!shouldHideElemento(userRol, 'buscar-direcciones') && !menuBusquedaMinimizado && (
-  <div className="absolute top-4 right-4 z-[50] w-80 bg-white/95 backdrop-blur-sm border shadow-lg p-4 rounded-lg">
-    <BuscarDirecciones
-      onLocationSelect={(lat, lng, address) => {
-        handleLocationSelect(lat, lng, address, undefined)
-      }}
-      onFlyTo={(lat, lng) => {
-        setFlyToRequest({ lat, lng })
-      }}
-      onMinimizar={() => setMenuBusquedaMinimizado(true)}
-    />
-  </div>
-)}
-
-
-
+      {/* Barra de búsqueda de direcciones */}
+      {!shouldHideElemento(userRol, 'buscar-direcciones') && !menuBusquedaMinimizado && (
+        <div className="absolute top-4 right-4 z-[50] w-80 bg-white/95 backdrop-blur-sm border shadow-lg p-4 rounded-lg">
+          <BuscarDirecciones
+            onLocationSelect={(lat, lng, address) => {
+              handleLocationSelect(lat, lng, address, undefined)
+            }}
+            onFlyTo={(lat, lng) => {
+              setFlyToRequest({ lat, lng })
+            }}
+            onMinimizar={() => setMenuBusquedaMinimizado(true)}
+          />
+        </div>
+      )}
 
       <MapComponent
         selectedLocation={selectedLocation}
@@ -208,6 +205,7 @@ export function MapaMapa({
         guardarUbicacion={guardarUbicacion}
         flyToRequest={flyToRequest}
         onReverseComplete={() => setReverseActive(true)}
+		actualizarPosicion={actualizarPosicion}
       />
 
       {Modal}
@@ -216,14 +214,14 @@ export function MapaMapa({
       {selectedTrampa && !showFormulario && !shouldHideElemento(userRol, 'sidebar-informes') && (
         <div className="absolute top-4 right-4 z-[100] w-80">
           <SidebarInformes
-            trampaId={selectedTrampa.id}
+            trampaId={selectedTrampa.id}                         // ✅ id string
             direccion={selectedTrampa.location.address}
             lat={selectedTrampa.location.lat}
             lng={selectedTrampa.location.lng}
             traps={selectedTrampa.traps}
             tipoSeleccionado={tipoSeleccionado}
             setTipoSeleccionado={setTipoSeleccionado}
-            informes={informesPorTrampa[selectedTrampa.id] || []}
+            informes={informesPorTrampa[selectedTrampa.id] || []} // ✅ clave string
             onAgregarNuevo={() => {
               setInformeEditando(null)
               setShowFormulario(true)
@@ -273,7 +271,8 @@ export function MapaMapa({
             </Button>
           )}
         </div>
-      )}	
+      )}    
+
       {/* Formulario de informes */}
       {selectedTrampa && showFormulario && !shouldHideElemento(userRol, 'Informes-Trampas') && (
         <div className="absolute inset-0 z-[100] bg-black/50 flex items-center justify-center">
@@ -282,7 +281,7 @@ export function MapaMapa({
               direccion={selectedTrampa.location.address}
               lat={selectedTrampa.location.lat}
               lng={selectedTrampa.location.lng}
-              trampaId={selectedTrampa.id ?? 0}
+              trampaId={selectedTrampa.id ?? ''}   // ✅ string en vez de número
               informesExistentes={informesPorTrampa[selectedTrampa.id] || []}
               informeExistente={informeEditando}
               onGuardado={handleGuardarInforme}

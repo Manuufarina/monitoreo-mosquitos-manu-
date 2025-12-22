@@ -1,0 +1,16 @@
+https://supabase.com/
+https://supabase.com/dashboard/project/icyoqxxadccegcywwhkg
+
+Organization: DAHolasekCosta's Org
+Project name: DAHolasekCosta's Monitor-Mosiquitos
+Database password: Lo3ln8F6SkQzzntd
+Project URL: https://icyoqxxadccegcywwhkg.supabase.co
+API Key:
+eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImljeW9xeHhhZGNjZWdjeXd3aGtnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjUzNjg2NzEsImV4cCI6MjA4MDk0NDY3MX0.2Q7d_R6w9aHBNuJeCeE9vKshQnQQU7ELvQpFtSAVyw4
+
+
+import { createClient } from '@supabase/supabase-js'
+
+const supabaseUrl = 'https://icyoqxxadccegcywwhkg.supabase.co'
+const supabaseKey = process.env.SUPABASE_KEY
+const supabase = createClient(supabaseUrl, supabaseKey)

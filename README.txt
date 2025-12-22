@@ -237,7 +237,7 @@ cambios en el orden de capas (z-index) para que el SidebarInformes quede por enc
 intentos de deploy en Vercel, configurando el flujo para que el proyecto se pueda publicar online.
 ----------------------------------------------------------------------------------------------------------------
 Día 9/12
-ntente trabajar con Prisma 7.1.0:
+intente trabajar con Prisma 7.1.0:
 Ajuste tu package.json y corrí pnpm install.
 encontre con errores de validación (P1012) porque Prisma 7 ya no acepta url dentro del datasource.
 Corregí tu schema.prisma quitando el url y pasándolo al .env.
@@ -247,11 +247,18 @@ Seguían devolviendo 500 porque el cliente no se inicializaba bien.
 Conclusión del día: avance en entender los cambios de Prisma 7, pero todavía no tenías la base funcionando.
 ----------------------------------------------------------------------------------------------------------------
 Día 10/12
-10 de diciembre
 Decidí volver a Prisma 6.19.0, la versión que ya te había funcionado:
 Cambie las dependencias en package.json a "@prisma/client": "6.19.0" y "prisma": "6.19.0".
 Reinstale con pnpm install.
 Regenere el cliente con pnpm prisma generate.
 ya anda la base de datos y corre pnpm dev
 ----------------------------------------------------------------------------------------------------------------
-Día 11/12
+Día 11/12: Corregí lat y lng para compatibilidad con MongoDB. Confirmé lecturas con GET.
+Día 12/12: Unifiqué id como string en todo el flujo. Ajusté schema.prisma. Probé PATCH con coordenadas, pero no funcionó de forma consistente y volví a la versión que sólo actualizaba dirección/ubicación.
+Día 15/12: Refactoricé MapComponent para que dragend reporte coordenadas. El alert no aparecía; mantuve la versión previa mientras depuraba.
+Día 16/12: Revisé ActualizarProvider y Page. Cambié funciones para enviar id como string. La descripción quedó operativa; la posición seguía sin actualizar, mantuve cambios mínimos.
+Día 17/12: Detecté que MapaMapa no reenviaba actualizarPosicion al MapComponent. Intenté agregar props, aparecieron errores de referencia y revertí parcialmente.
+Día 18/12: Resolví ReferenceError en MapaMapa declarando la prop en la interfaz y en los parámetros. Reapliqué el cambio.
+Día 19/12: Reprobé dragend: ya muestra alert y actualiza coordenadas. Confirmé id como string en Page, MapaMapa, MapComponent y Provider.
+Día 21/12: Consolidé la versión estable: lat/lng en MongoDB, id como string, MapaMapa reenvía actualizarPosicion, dragend operativo. Documenté los intentos fallidos y las reversiones para trazabilidad.
+----------------------------------------------------------------------------------------------------------------
