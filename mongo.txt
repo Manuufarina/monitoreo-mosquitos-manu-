@@ -1,0 +1,4 @@
+Username damianholasekcosta_db_user
+Password Ljgjhfd4KwakFCjY
+Your current IP address (181.89.213.236) 
+mongodb+srv://damianholasekcosta_db_user:Ljgjhfd4KwakFCjY@monitor-mosquitos.blbegx3.mongodb.net/?appName=monitor-mosquitos

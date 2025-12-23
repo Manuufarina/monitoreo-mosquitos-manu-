@@ -1,6 +1,10 @@
 import { NextResponse } from 'next/server'
-import { prisma } from '@/lib/prisma'
+import { PrismaClient } from '@prisma/client'
+import bcrypt from 'bcryptjs'
 
+const prisma = new PrismaClient()
+
+// 📍 Cambiar contraseña
 export async function POST(request: Request) {
   try {
     const { usuario, passwordActual, passwordNueva } = await request.json()
@@ -23,20 +27,24 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Usuario no encontrado' }, { status: 404 })
     }
 
-    // Validar contraseña actual
-    if (encontrado.password !== passwordActual.trim()) {
+    // Validar contraseña actual (usando bcrypt si está hasheada)
+    const passwordValida = await bcrypt.compare(passwordActual.trim(), encontrado.password)
+    if (!passwordValida) {
       return NextResponse.json({ error: 'Contraseña actual incorrecta' }, { status: 401 })
     }
 
+    // Hashear nueva contraseña
+    const passwordHasheada = await bcrypt.hash(passwordNueva.trim(), 10)
+
     // Actualizar contraseña
     await prisma.usuario.update({
-      where: { id: encontrado.id }, // ✅ id es string ObjectId
-      data: { password: passwordNueva.trim() }
+      where: { id: encontrado.id },
+      data: { password: passwordHasheada }
     })
 
     return NextResponse.json({ success: true })
   } catch (err) {
-    console.error('❌ Error en cambiar-password:', err)
+    console.error('❌ Error en password/route.ts:', err)
     return NextResponse.json({ error: 'Error interno del servidor' }, { status: 500 })
   }
 }
