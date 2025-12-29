@@ -8,14 +8,16 @@ datasource db {
 }
 
 model Usuario {
-  id        String   @id @default(auto()) @map("_id") @db.ObjectId
-  nombre    String
-  email     String?  @unique
-  password  String
-  creadoEn  DateTime @default(now())
+  id             String   @id @default(auto()) @map("_id") @db.ObjectId
+  nombre         String
+  email          String?   // 👈 opcional, sin @unique
+  password       String
+  creadoEn       DateTime @default(now())
 
-  rangoId   String?  @db.ObjectId
-  rango     Rango?   @relation(fields: [rangoId], references: [id])
+  rangoId        String?  @db.ObjectId
+  rango          Rango?   @relation(fields: [rangoId], references: [id])
+
+  nombreApellido String?  // 👈 campo opcional para nombre completo de la persona
 }
 
 model Rango {

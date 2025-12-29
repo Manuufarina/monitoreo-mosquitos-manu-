@@ -1,90 +1,54 @@
 'use client'
 
 import { useState } from 'react'
-import { Label } from '@/components/ui/label'
-import { Input } from '@/components/ui/input'
-import { Textarea } from '@/components/ui/textarea'
 import { Button } from '@/components/ui/button'
+import { Label } from '@/components/ui/label'
 
-interface Informe {
-  id?: number
-  fecha: string
-  tipos: ('ovi' | 'adultos')[]
-  cantidades?: {
-    ovi?: { Anopheles?: number; Aedes?: number; Culex?: number }
-    adultos?: { Anopheles?: number; Aedes?: number; Culex?: number }
-  }
-  notas?: string
-  trampaId: number
-}
-
-interface InformesTrampasProps {
-  direccion: string
-  lat: number
-  lng: number
-  trampaId: number
-  informesExistentes?: Informe[]
-  onCancelar: () => void
-  informeExistente?: Informe
-  onGuardado: (informe: Informe) => void
+interface InformeTrampaProps {
+  trampaId: string
+  informesExistentes: any[]
+  informeExistente?: any | null
+  onGuardado: (payload: any) => void
+  operadores: { id: string; nombre: string; apellido: string }[]
 }
 
 export function InformesTrampas({
-  direccion,
-  lat,
-  lng,
   trampaId,
-  informesExistentes = [],
-  onCancelar,
+  informesExistentes,
   informeExistente,
   onGuardado,
-}: InformesTrampasProps) {
-  const hoy = new Date().toISOString().split('T')[0]
+  operadores,
+}: InformeTrampaProps) {
+  const [grupo, setGrupo] = useState(informeExistente?.grupo ?? 'control')
+  const [fecha, setFecha] = useState(informeExistente?.fecha?.split('T')[0] ?? '')
+  const [hora, setHora] = useState(informeExistente?.hora ?? '')
+  const [ronda, setRonda] = useState(informeExistente?.ronda ?? 'semana1')
+  const [operador, setOperador] = useState(informeExistente?.operadorId ?? '')
+  const [ubicacion, setUbicacion] = useState(informeExistente?.ubicacion ?? 'interior')
+  const [clima, setClima] = useState(informeExistente?.clima ?? '')
+  const [fumigacion, setFumigacion] = useState(informeExistente?.fumigacion ?? 'no')
+  const [estadoDispositivo, setEstadoDispositivo] = useState(informeExistente?.estadoDispositivo ?? '')
+  const [estadoEnvase, setEstadoEnvase] = useState(informeExistente?.estadoEnvase ?? 'correcto')
 
-  const [fecha, setFecha] = useState(informeExistente?.fecha.split('T')[0] || hoy)
-  const [tipos, setTipos] = useState<('ovi' | 'adultos')[]>(informeExistente?.tipos || [])
-  const [notas, setNotas] = useState(informeExistente?.notas || '')
+  // Variables entomológicas
+  const [ovitrapPositiva, setOvitrapPositiva] = useState(informeExistente?.ovitrapPositiva ?? 'no')
+  const [larvasPupas, setLarvasPupas] = useState(informeExistente?.larvasPupas ?? 'no')
+  const [emergenciaAdultos, setEmergenciaAdultos] = useState(informeExistente?.emergenciaAdultos ?? 'no')
+  const [cantidadAdultos, setCantidadAdultos] = useState(informeExistente?.cantidadAdultos ?? 0)
 
-  const [cantidadesOvi, setCantidadesOvi] = useState<{ [key: string]: string }>(
-    informeExistente?.cantidades?.ovi || {}
-  )
-  const [cantidadesAdultos, setCantidadesAdultos] = useState<{ [key: string]: string }>(
-    informeExistente?.cantidades?.adultos || {}
-  )
+  // Especies
+  const [anopheles, setAnopheles] = useState(informeExistente?.anopheles ?? 'negativo')
+  const [aedes, setAedes] = useState(informeExistente?.aedes ?? 'negativo')
+  const [culex, setCulex] = useState(informeExistente?.culex ?? 'negativo')
 
-  // 🔒 Cooldown state
   const [cooldown, setCooldown] = useState(false)
-  const [countdown, setCountdown] = useState(0)
 
   const startCooldown = () => {
     setCooldown(true)
-    setCountdown(5)
-    const interval = setInterval(() => {
-      setCountdown((prev) => {
-        if (prev <= 1) {
-          clearInterval(interval)
-          setCooldown(false)
-          return 0
-        }
-        return prev - 1
-      })
-    }, 1000)
-  }
-
-  const toggleTipo = (valor: 'ovi' | 'adultos') => {
-    setTipos((prev) =>
-      prev.includes(valor) ? prev.filter((t) => t !== valor) : [...prev, valor]
-    )
+    setTimeout(() => setCooldown(false), 3000)
   }
 
   const handleGuardar = () => {
-    if (cooldown) return // ✅ evita múltiples clicks
-
-    if (!fecha || tipos.length === 0) {
-      alert('Completá al menos la fecha y el tipo de trampa.')
-      return
-    }
-
     // Validación de duplicados
     const yaExiste = informesExistentes.some(
       (inf) =>
@@ -97,34 +61,25 @@ export function InformesTrampas({
       return
     }
 
-    // limpiar y convertir cantidades
-    const cleanOvi: Record<string, number> = {}
-    Object.entries(cantidadesOvi).forEach(([k, v]) => {
-      const n = Number(v)
-      if (!Number.isNaN(n) && n > 0) cleanOvi[k] = n
-    })
-
-    const cleanAdultos: Record<string, number> = {}
-    Object.entries(cantidadesAdultos).forEach(([k, v]) => {
-      const n = Number(v)
-      if (!Number.isNaN(n) && n > 0) cleanAdultos[k] = n
-    })
-
-    if (Object.keys(cleanOvi).length === 0 && Object.keys(cleanAdultos).length === 0) {
-      alert('Debés ingresar al menos una cantidad válida')
-      return
-    }
-
-    const payload: Informe = {
-      id: informeExistente?.id,
+    const payload = {
       trampaId,
-      fecha: new Date(fecha).toISOString(),
-      tipos,
-      cantidades: {
-        ovi: cleanOvi,
-        adultos: cleanAdultos,
-      },
-      notas,
+      grupo,
+      fecha,
+      hora,
+      ronda,
+      operadorId: operador,
+      ubicacion,
+      clima,
+      fumigacion,
+      estadoDispositivo,
+      estadoEnvase,
+      anopheles,
+      aedes,
+      culex,
+      ovitrapPositiva,
+      larvasPupas,
+      emergenciaAdultos,
+      cantidadAdultos,
     }
 
     console.log('📤 Payload preparado:', payload)
@@ -134,123 +89,169 @@ export function InformesTrampas({
     startCooldown()
   }
 
-  const renderEspecieGrid = (grupo: 'ovi' | 'adultos') => {
-    const especies = ['Anopheles', 'Aedes', 'Culex']
-    const cantidades = grupo === 'ovi' ? cantidadesOvi : cantidadesAdultos
-    const setCantidades = grupo === 'ovi' ? setCantidadesOvi : setCantidadesAdultos
-    const anteriores = informeExistente?.cantidades?.[grupo] || {}
-
-    return (
-      <div className="grid grid-cols-3 gap-2 justify-center items-start">
-        {especies.map((esp) => (
-          <div key={`${grupo}-${esp}`} className="flex flex-col items-center">
-            <Label>{esp}</Label>
-            <Input
-              type="number"
-              value={cantidades[esp] || ''}
-              onChange={(e) =>
-                setCantidades((prev) => ({ ...prev, [esp]: e.target.value }))
-              }
-              className="w-16 text-center text-sm btn-fluor"
-            />
-            {anteriores[esp] && (
-              <span className="text-xs text-gray-500 mt-1">
-                Anterior: {anteriores[esp]}
-              </span>
-            )}
-          </div>
-        ))}
-      </div>
-    )
-  }
-
   return (
-    <div className="space-y-3 max-w-2xl mx-auto px-4">
-      <div className="space-y-1 text-center">
-        <Label className="text-sm font-medium">Dirección</Label>
-        <p className="text-sm text-muted-foreground">{direccion}</p>
+    <div className="space-y-6 p-4 bg-white rounded-lg shadow-md">
+      <h2 className="text-lg font-semibold">Informe de Trampa</h2>
+
+      {/* Grupo */}
+      <div>
+        <Label>Grupo</Label>
+        <select value={grupo} onChange={(e) => setGrupo(e.target.value)}>
+          <option value="control">Control</option>
+          <option value="intervencion">Intervención</option>
+        </select>
       </div>
 
-      <div className="space-y-1 text-center">
-        <Label className="text-sm font-medium">Fecha</Label>
-        <Input
-          type="date"
-          value={fecha}
-          onChange={(e) => setFecha(e.target.value)}
-          className="mx-auto w-48 text-center bg-green-700 text-white rounded-md px-3 py-1"
-        />
-      </div>
-
-      <div className="space-y-1 text-center">
-        <Label className="text-sm font-medium">Tipo de trampa</Label>
-        <div className="flex justify-center space-x-2">
-          <Button
-            className={`transition duration-200 ease-in-out active:scale-[0.98] ${
-              tipos.includes('ovi')
-                ? 'bg-green-900 text-white hover:bg-green-800'
-                : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-            }`}
-            size="sm"
-            onClick={() => toggleTipo('ovi')}
-          >
-            Ovi-Larvi-Trampas
-          </Button>
-          <Button
-            className={`transition duration-200 ease-in-out active:scale-[0.98] ${
-              tipos.includes('adultos')
-                ? 'bg-green-900 text-white hover:bg-green-800'
-                : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-            }`}
-            size="sm"
-            onClick={() => toggleTipo('adultos')}
-          >
-            Trampa-Adultos
-          </Button>
+      {/* Fecha y hora */}
+      <div className="flex gap-4">
+        <div>
+          <Label>Fecha de visita</Label>
+          <input type="date" value={fecha} onChange={(e) => setFecha(e.target.value)} />
+        </div>
+        <div>
+          <Label>Hora</Label>
+          <input type="time" value={hora} onChange={(e) => setHora(e.target.value)} />
         </div>
       </div>
 
-      {tipos.includes('ovi') && (
-        <div className="space-y-1 text-center animate-fade-in-up">
-          <Label className="text-sm font-medium">Ovi-Larvi-Trampas</Label>
-          {renderEspecieGrid('ovi')}
-        </div>
-      )}
-
-      {tipos.includes('adultos') && (
-        <div className="space-y-1 text-center animate-fade-in-up">
-          <Label className="text-sm font-medium">Trampa-Adultos</Label>
-          {renderEspecieGrid('adultos')}
-        </div>
-      )}
-
-      <div className="space-y-1">
-        <Label className="text-sm font-medium">Notas adicionales</Label>
-        <Textarea
-          placeholder="Observaciones..."
-          value={notas}
-          onChange={(e) => setNotas(e.target.value)}
-        />
+      {/* Ronda */}
+      <div>
+        <Label>Ronda de semana</Label>
+        <select value={ronda} onChange={(e) => setRonda(e.target.value)}>
+          <option value="semana1">Semana 1</option>
+          <option value="semana2">Semana 2</option>
+          <option value="semana3">Semana 3</option>
+          <option value="semana4">Semana 4</option>
+        </select>
       </div>
 
-      <div className="flex justify-between space-x-2">
-        <Button
-          variant="outline"
-          onClick={onCancelar}
-          disabled={cooldown} // opcional: también bloquea cancelar
-          className="w-1/2 bg-green-900 text-white hover:bg-green-800 transition duration-200 ease-in-out active:scale-[0.98]"
-        >
-          Cancelar
-        </Button>
+      {/* Operador */}
+      <div>
+        <Label>Operador</Label>
+  <select value={operador} onChange={(e) => setOperador(e.target.value)}>
+  <option value="">Seleccione operador</option>
+  {Array.isArray(operadores) &&
+    operadores.map((op) => (
+      <option key={op.id} value={op.id}>
+        {op.nombre} {op.nombreApellido ?? ""}
+      </option>
+    ))}
+</select>
+      </div>
+
+      {/* Ubicación */}
+      <div>
+        <Label>Ubicación</Label>
+        <select value={ubicacion} onChange={(e) => setUbicacion(e.target.value)}>
+          <option value="interior">Interior</option>
+          <option value="exterior">Exterior</option>
+        </select>
+      </div>
+
+      {/* Clima */}
+      <div>
+        <Label>Condiciones climáticas</Label>
+        <textarea value={clima} onChange={(e) => setClima(e.target.value)} />
+      </div>
+
+      {/* Fumigación */}
+      <div>
+        <Label>Registro de fumigación reciente</Label>
+        <select value={fumigacion} onChange={(e) => setFumigacion(e.target.value)}>
+          <option value="si">Sí</option>
+          <option value="no">No</option>
+        </select>
+      </div>
+
+      {/* Estado dispositivo */}
+      <div>
+        <Label>Estado del dispositivo</Label>
+        <textarea value={estadoDispositivo} onChange={(e) => setEstadoDispositivo(e.target.value)} />
+      </div>
+
+      {/* Estado envase */}
+      <div>
+        <Label>Estado del envase</Label>
+        <select value={estadoEnvase} onChange={(e) => setEstadoEnvase(e.target.value)}>
+          <option value="correcto">Correcto</option>
+          <option value="volcado">Volcado</option>
+          <option value="seco">Seco</option>
+          <option value="roto">Roto</option>
+          <option value="faltante">Faltante</option>
+        </select>
+      </div>
+
+      {/* Especies */}
+      <h3 className="font-semibold">Especies</h3>
+      <div className="flex gap-4">
+        <div>
+          <Label>Anopheles</Label>
+          <select value={anopheles} onChange={(e) => setAnopheles(e.target.value)}>
+            <option value="positivo">Positivo</option>
+            <option value="negativo">Negativo</option>
+          </select>
+        </div>
+        <div>
+          <Label>Aedes</Label>
+          <select value={aedes} onChange={(e) => setAedes(e.target.value)}>
+            <option value="positivo">Positivo</option>
+            <option value="negativo">Negativo</option>
+          </select>
+        </div>
+        <div>
+          <Label>Culex</Label>
+          <select value={culex} onChange={(e) => setCulex(e.target.value)}>
+            <option value="positivo">Positivo</option>
+            <option value="negativo">Negativo</option>
+          </select>
+        </div>
+      </div>
+
+      {/* Variables entomológicas */}
+      <h3 className="font-semibold">Variables Entomológicas</h3>
+      <div className="space-y-2">
+        <div>
+          <Label>Ovitrap positiva</Label>
+          <select value={ovitrapPositiva} onChange={(e) => setOvitrapPositiva(e.target.value)}>
+            <option value="si">Sí</option>
+            <option value="no">No</option>
+          </select>
+        </div>
+
+        <div>
+          <Label>Presencia de larvas/pupas</Label>
+          <select value={larvasPupas} onChange={(e) => setLarvasPupas(e.target.value)}>
+            <option value="si">Sí</option>
+            <option value="no">No</option>
+          </select>
+        </div>
+
+        <div>
+          <Label>Emergencia de adultos</Label>
+          <select value={emergenciaAdultos} onChange={(e) => setEmergenciaAdultos(e.target.value)}>
+            <option value="si">Sí</option>
+            <option value="no">No</option>
+          </select>
+          {emergenciaAdultos === 'si' && (
+            <input
+              type="number"
+              value={cantidadAdultos}
+              onChange={(e) => setCantidadAdultos(Number(e.target.value))}
+              placeholder="Cantidad"
+              className="ml-2 w-24 border rounded px-2 py-1"
+            />
+          )}
+        </div>
+      </div>
+
+      {/* Botón de guardar */}
+      <div className="pt-4">
         <Button
           onClick={handleGuardar}
-          disabled={cooldown} // ✅ deshabilitado en cooldown
-          className="w-1/2 bg-green-900 text-white hover:bg-green-800 transition duration-200 ease-in-out active:scale-[0.98]"
+          disabled={cooldown}
+          className={`w-full ${cooldown ? 'bg-gray-400' : 'bg-green-900 hover:bg-green-800'} text-white`}
         >
-          {cooldown
-            ? `Reintentar en ${countdown}s`
-            : informeExistente
-              ? 'Actualizar informe'
-              : 'Guardar informe'}
+          {cooldown ? 'Guardando...' : 'Guardar informe'}
         </Button>
       </div>
     </div>

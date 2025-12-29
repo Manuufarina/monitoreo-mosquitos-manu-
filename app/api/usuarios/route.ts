@@ -6,7 +6,7 @@ const prisma = new PrismaClient()
 // 📍 Crear usuario
 export async function POST(req: Request) {
   try {
-    const { usuario, password, rol } = await req.json()
+    const { usuario, password, rol, nombreApellido } = await req.json()
 
     if (!usuario || !password || !rol) {
       return NextResponse.json({ error: 'Faltan campos obligatorios' }, { status: 400 })
@@ -40,15 +40,22 @@ export async function POST(req: Request) {
     const nuevo = await prisma.usuario.create({
       data: {
         nombre,
-        email: isEmail ? usuario.trim() : null,
+        email: isEmail ? usuario.trim() : "sin-correo", // 👈 nunca null
         password: password.trim(),
         rangoId: rango.id,
+        nombreApellido: nombreApellido?.trim() ?? null,
       },
     })
 
     return NextResponse.json({
       success: true,
-      usuario: { id: nuevo.id, nombre: nuevo.nombre, email: nuevo.email, rangoId: nuevo.rangoId }
+      usuario: { 
+        id: nuevo.id, 
+        nombre: nuevo.nombre, 
+        email: nuevo.email, 
+        rangoId: nuevo.rangoId,
+        nombreApellido: nuevo.nombreApellido
+      }
     })
   } catch (err) {
     console.error('❌ Error al crear usuario:', err)
@@ -87,9 +94,15 @@ export async function GET(req: Request) {
 // 📍 Actualizar usuario (o quitar rango)
 export async function PATCH(req: Request) {
   try {
-    const { id, nombre, email, password, rangoId, quitarRango } = await req.json()
+    const { id, nombre, email, password, rangoId, quitarRango, nombreApellido } = await req.json()
 
-    const data: any = { nombre, email, password, rangoId }
+    const data: any = { 
+      nombre, 
+      email: email?.trim() || "sin-correo", // 👈 nunca null
+      password, 
+      rangoId, 
+      nombreApellido 
+    }
 
     // Si se pide quitar rango, lo dejamos en null
     if (quitarRango) {

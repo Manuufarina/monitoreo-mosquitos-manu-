@@ -23,7 +23,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ success: false, error: 'Usuario no encontrado' }, { status: 404 })
     }
 
-    if (!encontrado.email) {
+    if (!encontrado.email || encontrado.email === "sin-correo") {
       return NextResponse.json({ success: false, error: 'Este usuario no tiene correo registrado' }, { status: 404 })
     }
 
@@ -68,7 +68,7 @@ export async function PATCH(request: Request) {
   }
 }
 
-// 📍 Eliminar correo de un usuario (dejarlo en null)
+// 📍 Eliminar correo de un usuario (clasificar como sin-correo)
 export async function DELETE(request: Request) {
   try {
     const { usuario } = await request.json()
@@ -92,7 +92,7 @@ export async function DELETE(request: Request) {
 
     await prisma.usuario.update({
       where: { id: encontrado.id },
-      data: { email: null }
+      data: { email: "sin-correo" } // 👈 en vez de null
     })
 
     return NextResponse.json({ success: true })

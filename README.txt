@@ -262,3 +262,23 @@ Día 18/12: Resolví ReferenceError en MapaMapa declarando la prop en la interfa
 Día 19/12: Reprobé dragend: ya muestra alert y actualiza coordenadas. Confirmé id como string en Page, MapaMapa, MapComponent y Provider.
 Día 21/12: Consolidé la versión estable: lat/lng en MongoDB, id como string, MapaMapa reenvía actualizarPosicion, dragend operativo. Documenté los intentos fallidos y las reversiones para trazabilidad.
 ----------------------------------------------------------------------------------------------------------------
+Día 21/12
+Me enfoqué en seguir puliendo la lógica de usuarios y rangos. Me encontré con errores de Prisma al actualizar porque no estaba pasando el id correctamente,
+ y tuve que ajustar tanto el backend como el frontend para que se comuniquen bien. 
+Cree un nuevo menu de usuarios y mejore la logica de rangos 
+----------------------------------------------------------------------------------------------------------------
+Día 22  
+Me enfoqué en mejorar el menú de usuarios. Ajusté la lógica para listar usuarios por rango, agregué buscadores y botones más intuitivos, 
+y empecé a trabajar en la confirmación de acciones como eliminar o quitar rangos.
+ El objetivo fue que la gestión de usuarios sea más práctica y visualmente clara.
+----------------------------------------------------------------------------------------------------------------
+Día 23  
+Avancé con la parte de creación de usuarios. Revisé la comunicación entre frontend y backend, corregí errores de Prisma al actualizar y adapté el flujo para que se pueda añadir un usuario a un rango de manera más consistente.
+ También ajusté detalles del menú para que todo funcione de forma integrada.
+----------------------------------------------------------------------------------------------------------------
+Día 29/12
+Me dediqué a revisar la interacción entre el botón de reverse geocode y el SidebarInformes. 
+Descubrí que al activar el modo pin azul se seguía usando la última selectedLocation, lo que generaba confusión.
+Ajusté la lógica para que al pasar a modo pin se cierre el sidebar y se limpie la selección, evitando que me pregunte por trampas ya existentes. 
+Ahora el flujo de crear nuevas trampas quedó más ordenado.
+
