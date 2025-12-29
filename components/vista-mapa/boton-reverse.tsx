@@ -40,35 +40,35 @@ export function BotonReverse({
     onToggle(nextState)
 
     // 👇 si lo pasamos a rojo, cerramos sidebar, limpiamos selección y activamos cooldown
-    if (!reverseActive) {
+    if (nextState === false) {
       onCerrarSidebar() // 👈 cerrar SidebarInformes y limpiar selectedLocation
       setCooldown(true)
       setTimeout(() => setCooldown(false), 3000)
     }
 
-    // 👇 Cuando pasamos de modo zoom a modo pin azul
-    if (!nextState && selectedLocation) {
-      // 👇 esperar un tick para que React cierre el sidebar antes de mostrar el cartel
-      setTimeout(async () => {
-        const ok = await procesarDireccion(
-          guardarUbicacion,
-          selectedLocation.lat,
-          selectedLocation.lng,
-          setFueraMapa,
-          pedirConfirmacion,
-          () => onToggle(true) // 👈 reset automático a azul
-        )
+// 👇 Cuando volvemos a modo zoom (azul) y había una selección previa
+if (nextState === true && selectedLocation) {
+  setTimeout(async () => {
+    const ok = await procesarDireccion(
+      guardarUbicacion,
+      selectedLocation.lat,
+      selectedLocation.lng,
+      setFueraMapa,
+      pedirConfirmacion,
+      () => onToggle(true) // 👈 reset automático a azul
+    )
 
-        if (ok) {
-          onLocationSelect(
-            selectedLocation.lat,
-            selectedLocation.lng,
-            selectedLocation.address,
-            selectedLocation.ubicacion ?? null
-          )
-        }
-      }, 0)
+    if (ok) {
+      onLocationSelect(
+        selectedLocation.lat,
+        selectedLocation.lng,
+        selectedLocation.address,
+        selectedLocation.ubicacion ?? null
+      )
     }
+  }, 0)
+}
+
   }
 
   return (

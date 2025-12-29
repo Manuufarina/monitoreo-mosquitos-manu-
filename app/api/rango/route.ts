@@ -3,6 +3,20 @@ import { PrismaClient } from '@prisma/client'
 
 const prisma = new PrismaClient()
 
+// 📍 Listar todos los rangos
+export async function GET() {
+  try {
+    const rangos = await prisma.rango.findMany({
+      select: { id: true, nombre: true, reglas: true, creadoEn: true },
+      orderBy: { creadoEn: 'asc' }
+    })
+    return NextResponse.json({ success: true, rangos })
+  } catch (err) {
+    console.error('❌ Error al listar rangos:', err)
+    return NextResponse.json({ success: false, error: 'Error interno del servidor.' }, { status: 500 })
+  }
+}
+
 // 📍 Crear un nuevo rango
 export async function PUT(req: Request) {
   try {
@@ -12,7 +26,6 @@ export async function PUT(req: Request) {
       return NextResponse.json({ success: false, error: 'Nombre inválido.' }, { status: 400 })
     }
 
-    // Verificar si ya existe
     const existente = await prisma.rango.findUnique({
       where: { nombre: nombre.trim() }
     })
@@ -34,7 +47,7 @@ export async function PUT(req: Request) {
   }
 }
 
-// 📍 Editar (renombrar o actualizar reglas) de un rango
+// 📍 Editar un rango
 export async function PATCH(req: Request) {
   try {
     const { original, nuevo, reglas } = await req.json()
@@ -43,11 +56,8 @@ export async function PATCH(req: Request) {
       return NextResponse.json({ success: false, error: 'Datos inválidos.' }, { status: 400 })
     }
 
-    const originalNombre = original.trim()
-    const nuevoNombre = nuevo.trim()
-
     const rango = await prisma.rango.findUnique({
-      where: { nombre: originalNombre }
+      where: { nombre: original.trim() }
     })
 
     if (!rango) {
@@ -56,7 +66,7 @@ export async function PATCH(req: Request) {
 
     const actualizado = await prisma.rango.update({
       where: { id: rango.id },
-      data: { nombre: nuevoNombre, reglas: reglas || rango.reglas },
+      data: { nombre: nuevo.trim(), reglas: reglas || rango.reglas },
     })
 
     return NextResponse.json({ success: true, rango: actualizado })

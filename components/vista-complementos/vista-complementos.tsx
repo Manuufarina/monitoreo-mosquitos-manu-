@@ -1,11 +1,11 @@
 'use client'
 
-import CrearUsuario from './CrearUsuario'
+import { useState } from 'react'
 import CambiarPassword from './CambiarPassword'
 import CorreoUsuario from './CorreoUsuario'
-import AgregarCalle from './agregar-calle'
-import { getRolesQuePuedeCrear } from '@/lib/utils'
-import { shouldHideElemento } from '@/lib/permisos'
+import Usuarios from './Usuarios'
+import Rangos from './Rangos'
+import { Button } from '@/components/ui/button'
 
 export default function VistaComplementos({
   userRol,
@@ -17,8 +17,7 @@ export default function VistaComplementos({
   usuario: string
 }) {
   const rolFinal = userRol?.trim().toLowerCase()
-
-  console.log('🧩 Montando VistaComplementos para:', usuario)
+  const [menuActivo, setMenuActivo] = useState<'usuarios' | 'rangos' | null>(null)
 
   if (!rolFinal) {
     return (
@@ -28,23 +27,25 @@ export default function VistaComplementos({
     )
   }
 
-  const rolesDisponibles = getRolesQuePuedeCrear(rolFinal)
-
   return (
     <div className="container mx-auto px-4 py-6 space-y-6">
       <p className="text-sm text-muted-foreground">
         Rol actual: <strong>{rolFinal}</strong>
       </p>
 
-      <div className="flex flex-wrap gap-4 items-start">
-        {!shouldHideElemento(rolFinal, 'agregar-calle') && (
-          <AgregarCalle userRol={rolFinal} />
-        )}
-
-        {!shouldHideElemento(rolFinal, 'crear-usuario') && (
-          <CrearUsuario userRol={rolFinal} rolesDisponibles={rolesDisponibles} />
-        )}
+      {/* Botones principales */}
+      <div className="flex gap-4">
+        <Button onClick={() => setMenuActivo('usuarios')}>Usuarios</Button>
+        <Button onClick={() => setMenuActivo('rangos')}>Rangos</Button>
       </div>
+
+      {/* Menús flotantes */}
+      {menuActivo === 'usuarios' && (
+        <Usuarios userRol={rolFinal} onClose={() => setMenuActivo(null)} />
+      )}
+      {menuActivo === 'rangos' && (
+        <Rangos onClose={() => setMenuActivo(null)} />
+      )}
 
       <CambiarPassword />
       <CorreoUsuario isLoggedIn={isLoggedIn} usuario={usuario} />

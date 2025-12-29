@@ -1,0 +1,4 @@
+
+ejecuta servidor con pnpm dev luego en otra consola cmd ejeucta esto
+curl -X PUT http://localhost:3000/api/rango -H "Content-Type: application/json" -d "{\"nombre\":\"master\"}"
+curl -X PUT http://localhost:3000/api/rango -H "Content-Type: application/json" -d "{\"nombre\":\"usuario\"}"

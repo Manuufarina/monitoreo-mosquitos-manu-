@@ -56,34 +56,55 @@ export async function POST(req: Request) {
   }
 }
 
-// 📍 Listar todos los usuarios
-export async function GET() {
+// 📍 Listar usuarios (todos o filtrados por rango)
+export async function GET(req: Request) {
   try {
-    const usuarios = await prisma.usuario.findMany({
-      orderBy: { creadoEn: 'asc' },
-      include: { rango: true }, // opcional: trae el rango asociado
-    })
-    return NextResponse.json(usuarios)
+    const { searchParams } = new URL(req.url)
+    const rango = searchParams.get('rango')
+
+    let usuarios
+
+    if (rango) {
+      usuarios = await prisma.usuario.findMany({
+        where: { rango: { nombre: rango } },
+        orderBy: { creadoEn: 'asc' },
+        include: { rango: true },
+      })
+    } else {
+      usuarios = await prisma.usuario.findMany({
+        orderBy: { creadoEn: 'asc' },
+        include: { rango: true },
+      })
+    }
+
+    return NextResponse.json({ success: true, usuarios })
   } catch (error) {
-    console.error(error)
-    return NextResponse.json({ error: 'No se pudo obtener usuarios' }, { status: 500 })
+    console.error('❌ Error al obtener usuarios:', error)
+    return NextResponse.json({ success: false, error: 'No se pudo obtener usuarios' }, { status: 500 })
   }
 }
 
-// 📍 Actualizar usuario
+// 📍 Actualizar usuario (o quitar rango)
 export async function PATCH(req: Request) {
   try {
-    const { id, nombre, email, password, rangoId } = await req.json()
+    const { id, nombre, email, password, rangoId, quitarRango } = await req.json()
+
+    const data: any = { nombre, email, password, rangoId }
+
+    // Si se pide quitar rango, lo dejamos en null
+    if (quitarRango) {
+      data.rangoId = null
+    }
 
     const usuarioActualizado = await prisma.usuario.update({
       where: { id },
-      data: { nombre, email, password, rangoId },
+      data,
     })
 
-    return NextResponse.json(usuarioActualizado)
+    return NextResponse.json({ success: true, usuario: usuarioActualizado })
   } catch (error) {
-    console.error(error)
-    return NextResponse.json({ error: 'No se pudo actualizar el usuario' }, { status: 500 })
+    console.error('❌ Error al actualizar usuario:', error)
+    return NextResponse.json({ success: false, error: 'No se pudo actualizar el usuario' }, { status: 500 })
   }
 }
 
@@ -96,7 +117,7 @@ export async function DELETE(req: Request) {
 
     return NextResponse.json({ success: true })
   } catch (error) {
-    console.error(error)
-    return NextResponse.json({ error: 'No se pudo eliminar el usuario' }, { status: 500 })
+    console.error('❌ Error al eliminar usuario:', error)
+    return NextResponse.json({ success: false, error: 'No se pudo eliminar el usuario' }, { status: 500 })
   }
 }
