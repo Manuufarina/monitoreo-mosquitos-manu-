@@ -9,10 +9,9 @@ export const GET = async () => {
         id: true,
         nombre: true,
         email: true,
-        creadoEn: true,
         rango: { select: { nombre: true, reglas: true } }
       },
-      orderBy: { creadoEn: 'asc' } // ✅ usar fecha en vez de id numérico
+      orderBy: { nombre: 'asc' } // 👈 ordenar por nombre (campo válido)
     })
 
     if (!usuarios || usuarios.length === 0) {

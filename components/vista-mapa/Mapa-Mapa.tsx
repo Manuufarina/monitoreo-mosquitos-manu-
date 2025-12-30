@@ -210,50 +210,53 @@ export function MapaMapa({
 
       {Modal}
 
-      {/* SidebarInformes */}
-      {selectedTrampa && !showFormulario && !shouldHideElemento(userRol, 'sidebar-informes') && (
-        <div className="absolute top-4 right-4 z-[100] w-80">
-          <SidebarInformes
-            trampaId={selectedTrampa.id}                         // ✅ id string
-            direccion={selectedTrampa.location.address}
-            lat={selectedTrampa.location.lat}
-            lng={selectedTrampa.location.lng}
-            traps={selectedTrampa.traps}
-            tipoSeleccionado={tipoSeleccionado}
-            setTipoSeleccionado={setTipoSeleccionado}
-            informes={informesPorTrampa[selectedTrampa.id] || []} // ✅ clave string
-            onAgregarNuevo={() => {
-              setInformeEditando(null)
-              setShowFormulario(true)
-            }}
-            onEditarInforme={(informe) => {
-              setInformeEditando(informe)
-              setShowFormulario(true)
-            }}
-            onEliminarInforme={handleEliminarInforme}
-            onEliminarPin={async (direccion) => {
-              const ok = await eliminarPin(direccion)
-              if (ok) {
-                await recargarTrampas()
-                setSelectedTrampa(null)
-                setSelectedLocation(null)
-                setReverseActive(true)
-              } else {
-                alert('❌ No se pudo eliminar el pin.')
-              }
-            }}
-            onGuardarUbicacion={guardarUbicacion}
-            onCerrar={() => {
-              setSelectedTrampa(null)
-              setSelectedLocation(null)
-              setReverseActive(true)
-            }}
-            modoEdicionPin={modoEdicionPin}
-            setModoEdicionPin={setModoEdicionPin}
-            ubicacion={selectedTrampa.ubicacion}
-          />
-        </div>
-      )}
+   {/* SidebarInformes */}
+{selectedTrampa && !showFormulario && !shouldHideElemento(userRol, 'sidebar-informes') && (
+  <div className="absolute top-4 right-4 z-[100] w-80">
+    <SidebarInformes
+      trampaId={selectedTrampa.id}                         // ✅ id string
+      numero={selectedTrampa.numero}                       // 👈 agregar esta línea
+      direccion={selectedTrampa.location.address}
+      lat={selectedTrampa.location.lat}
+      lng={selectedTrampa.location.lng}
+      traps={selectedTrampa.traps}
+      tipoSeleccionado={tipoSeleccionado}
+      setTipoSeleccionado={setTipoSeleccionado}
+      informes={informesPorTrampa[selectedTrampa.id] || []} // ✅ clave string
+      onAgregarNuevo={() => {
+        setInformeEditando(null)
+        setShowFormulario(true)
+      }}
+      onEditarInforme={(informe) => {
+        setInformeEditando(informe)
+        setShowFormulario(true)
+      }}
+      onEliminarInforme={handleEliminarInforme}
+      onEliminarPin={async (direccion) => {
+        const ok = await eliminarPin(direccion)
+        if (ok) {
+          await recargarTrampas()
+          setSelectedTrampa(null)
+          setSelectedLocation(null)
+          setReverseActive(true)
+        } else {
+          alert('❌ No se pudo eliminar el pin.')
+        }
+      }}
+      onGuardarUbicacion={guardarUbicacion}
+      onCerrar={() => {
+        setSelectedTrampa(null)
+        setSelectedLocation(null)
+        setReverseActive(true)
+      }}
+      modoEdicionPin={modoEdicionPin}
+      setModoEdicionPin={setModoEdicionPin}
+      ubicacion={selectedTrampa.ubicacion}
+      creadoEn={selectedTrampa.creadoEn}
+    />
+  </div>
+)}
+
 
       {/* Botón para reabrir búsqueda */}
       {!showFormulario && menuBusquedaMinimizado && (
@@ -277,19 +280,19 @@ export function MapaMapa({
       {selectedTrampa && showFormulario && !shouldHideElemento(userRol, 'Informes-Trampas') && (
         <div className="absolute inset-0 z-[100] bg-black/50 flex items-center justify-center">
           <div className="w-[88vw] max-w-3xl max-h-[90vh] overflow-auto p-6 bg-white rounded-lg shadow-xl">
-            <InformesTrampas
-              direccion={selectedTrampa.location.address}
-              lat={selectedTrampa.location.lat}
-              lng={selectedTrampa.location.lng}
-              trampaId={selectedTrampa.id ?? ''}   // ✅ string en vez de número
-              informesExistentes={informesPorTrampa[selectedTrampa.id] || []}
-              informeExistente={informeEditando}
-              onGuardado={handleGuardarInforme}
-              onCancelar={() => {
-                setShowFormulario(false)
-                setInformeEditando(null)
-              }}
-            />
+			<InformesTrampas
+			  direccion={selectedTrampa.location.address}
+			  lat={selectedTrampa.location.lat}
+			  lng={selectedTrampa.location.lng}
+			  trampaId={selectedTrampa.id ?? ''}
+			  informesExistentes={informesPorTrampa[selectedTrampa.id] || []}
+			  informeExistente={informeEditando}
+			  onGuardado={handleGuardarInforme}
+			  onClose={() => {
+				setShowFormulario(false)
+				setInformeEditando(null)
+			  }}
+			/>
           </div>
         </div>
       )}

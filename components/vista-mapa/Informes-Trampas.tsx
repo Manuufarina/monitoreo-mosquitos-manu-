@@ -6,18 +6,22 @@ import { Label } from '@/components/ui/label'
 
 interface InformeTrampaProps {
   trampaId: string
+  numero: number
   informesExistentes: any[]
   informeExistente?: any | null
   onGuardado: (payload: any) => void
-  operadores: { id: string; nombre: string; apellido: string }[]
+  operadores: { id: string; nombre: string; nombreApellido?: string }[]
+  onClose?: () => void
 }
 
 export function InformesTrampas({
   trampaId,
+  numero,
   informesExistentes,
   informeExistente,
   onGuardado,
   operadores,
+  onClose,
 }: InformeTrampaProps) {
   const [grupo, setGrupo] = useState(informeExistente?.grupo ?? 'control')
   const [fecha, setFecha] = useState(informeExistente?.fecha?.split('T')[0] ?? '')
@@ -41,148 +45,191 @@ export function InformesTrampas({
   const [aedes, setAedes] = useState(informeExistente?.aedes ?? 'negativo')
   const [culex, setCulex] = useState(informeExistente?.culex ?? 'negativo')
 
+  // 🔒 Cooldown state con countdown
   const [cooldown, setCooldown] = useState(false)
+  const [countdown, setCountdown] = useState(0)
 
   const startCooldown = () => {
     setCooldown(true)
-    setTimeout(() => setCooldown(false), 3000)
+    setCountdown(5)
+    const interval = setInterval(() => {
+      setCountdown((prev) => {
+        if (prev <= 1) {
+          clearInterval(interval)
+          setCooldown(false)
+          return 0
+        }
+        return prev - 1
+      })
+    }, 1000)
   }
 
-  const handleGuardar = () => {
-    // Validación de duplicados
-    const yaExiste = informesExistentes.some(
-      (inf) =>
-        inf.trampaId === trampaId &&
-        inf.fecha.split('T')[0] === fecha &&
-        inf.id !== informeExistente?.id
-    )
-    if (yaExiste) {
-      alert('Ya existe un informe para esta dirección en esa fecha.')
-      return
-    }
+  const handleGuardar = async () => {
+  if (cooldown) return // ✅ evita múltiples clicks
 
-    const payload = {
-      trampaId,
-      grupo,
-      fecha,
-      hora,
-      ronda,
-      operadorId: operador,
-      ubicacion,
-      clima,
-      fumigacion,
-      estadoDispositivo,
-      estadoEnvase,
-      anopheles,
-      aedes,
-      culex,
-      ovitrapPositiva,
-      larvasPupas,
-      emergenciaAdultos,
-      cantidadAdultos,
-    }
-
-    console.log('📤 Payload preparado:', payload)
-    onGuardado(payload)
-
-    // ✅ activar cooldown después de guardar
-    startCooldown()
+  const yaExiste = informesExistentes.some(
+    (inf) =>
+      inf.trampaId === trampaId &&
+      inf.fecha.split('T')[0] === fecha &&
+      inf.id !== informeExistente?.id
+  )
+  if (yaExiste) {
+    alert('Ya existe un informe para esta dirección en esa fecha.')
+    return
   }
+
+  const payload = {
+    trampaId,
+    grupo,
+    fecha,
+    hora,
+    ronda,
+    operadorId: operador,
+    ubicacion,
+    clima,
+    fumigacion,
+    estadoDispositivo,
+    estadoEnvase,
+    anopheles,
+    aedes,
+    culex,
+    ovitrapPositiva,
+    larvasPupas,
+    emergenciaAdultos,
+    cantidadAdultos,
+  }
+
+  console.log('📤 Payload preparado:', payload)
+
+  try {
+    const res = await fetch('/api/informes', {
+      method: informeExistente ? 'PUT' : 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    })
+
+    const data = await res.json()
+    console.log('✅ Respuesta del backend:', data)
+
+    if (!res.ok) {
+      alert(data.error || 'Error al guardar informe')
+    } else {
+      alert('Informe guardado correctamente')
+      if (onGuardado) onGuardado(data.informe) // opcional: actualizar estado en el padre
+    }
+  } catch (err) {
+    console.error('❌ Error en fetch:', err)
+    alert('No se pudo guardar el informe')
+  }
+
+  startCooldown()
+}
+
 
   return (
     <div className="space-y-6 p-4 bg-white rounded-lg shadow-md">
-      <h2 className="text-lg font-semibold">Informe de Trampa</h2>
+      {/* Encabezado */}
+      <div className="grid grid-cols-3 items-center mb-4">
+        <h2 className="text-lg font-bold text-green-700">
+          Informe de Trampa
+        </h2>
 
-      {/* Grupo */}
-      <div>
-        <Label>Grupo</Label>
-        <select value={grupo} onChange={(e) => setGrupo(e.target.value)}>
-          <option value="control">Control</option>
-          <option value="intervencion">Intervención</option>
-        </select>
+
+        <span className="font-extrabold text-right">
+          N°{numero}
+        </span>
       </div>
 
-      {/* Fecha y hora */}
-      <div className="flex gap-4">
-        <div>
-          <Label>Fecha de visita</Label>
-          <input type="date" value={fecha} onChange={(e) => setFecha(e.target.value)} />
+      {/* Dos columnas */}
+      <div className="grid grid-cols-2 gap-6">
+        {/* Columna izquierda */}
+        <div className="space-y-4">
+          <div>
+            <Label>Grupo</Label>
+            <select value={grupo} onChange={(e) => setGrupo(e.target.value)}>
+              <option value="control">Control</option>
+              <option value="intervencion">Intervención</option>
+            </select>
+          </div>
+
+          <div className="flex gap-4">
+            <div>
+              <Label>Fecha de visita</Label>
+              <input type="date" value={fecha} onChange={(e) => setFecha(e.target.value)} />
+            </div>
+            <div>
+              <Label>Hora</Label>
+              <input type="time" value={hora} onChange={(e) => setHora(e.target.value)} />
+            </div>
+          </div>
+
+          <div>
+            <Label>Ronda de semana</Label>
+            <select value={ronda} onChange={(e) => setRonda(e.target.value)}>
+              <option value="semana1">Semana 1</option>
+              <option value="semana2">Semana 2</option>
+              <option value="semana3">Semana 3</option>
+              <option value="semana4">Semana 4</option>
+            </select>
+          </div>
+
+          <div>
+            <Label>Operador</Label>
+            <select value={operador} onChange={(e) => setOperador(e.target.value)}>
+              <option value="">Seleccione operador</option>
+              {Array.isArray(operadores) &&
+                operadores.map((op) => (
+                  <option key={op.id} value={op.id}>
+                    {op.nombre} {op.nombreApellido ?? ""}
+                  </option>
+                ))}
+            </select>
+          </div>
+
+          <div>
+            <Label>Ubicación</Label>
+            <select value={ubicacion} onChange={(e) => setUbicacion(e.target.value)}>
+              <option value="interior">Interior</option>
+              <option value="exterior">Exterior</option>
+            </select>
+          </div>
         </div>
-        <div>
-          <Label>Hora</Label>
-          <input type="time" value={hora} onChange={(e) => setHora(e.target.value)} />
+
+        {/* Columna derecha */}
+        <div className="space-y-4">
+          <div>
+            <Label>Condiciones climáticas</Label>
+            <textarea value={clima} onChange={(e) => setClima(e.target.value)} />
+          </div>
+
+          <div>
+            <Label>Registro de fumigación reciente</Label>
+            <select value={fumigacion} onChange={(e) => setFumigacion(e.target.value)}>
+              <option value="si">Sí</option>
+              <option value="no">No</option>
+            </select>
+          </div>
+
+          <div>
+            <Label>Estado del dispositivo</Label>
+            <textarea value={estadoDispositivo} onChange={(e) => setEstadoDispositivo(e.target.value)} />
+          </div>
+
+          <div>
+            <Label>Estado del envase</Label>
+            <select value={estadoEnvase} onChange={(e) => setEstadoEnvase(e.target.value)}>
+              <option value="correcto">Correcto</option>
+              <option value="volcado">Volcado</option>
+              <option value="seco">Seco</option>
+              <option value="roto">Roto</option>
+              <option value="faltante">Faltante</option>
+            </select>
+          </div>
         </div>
-      </div>
-
-      {/* Ronda */}
-      <div>
-        <Label>Ronda de semana</Label>
-        <select value={ronda} onChange={(e) => setRonda(e.target.value)}>
-          <option value="semana1">Semana 1</option>
-          <option value="semana2">Semana 2</option>
-          <option value="semana3">Semana 3</option>
-          <option value="semana4">Semana 4</option>
-        </select>
-      </div>
-
-      {/* Operador */}
-      <div>
-        <Label>Operador</Label>
-  <select value={operador} onChange={(e) => setOperador(e.target.value)}>
-  <option value="">Seleccione operador</option>
-  {Array.isArray(operadores) &&
-    operadores.map((op) => (
-      <option key={op.id} value={op.id}>
-        {op.nombre} {op.nombreApellido ?? ""}
-      </option>
-    ))}
-</select>
-      </div>
-
-      {/* Ubicación */}
-      <div>
-        <Label>Ubicación</Label>
-        <select value={ubicacion} onChange={(e) => setUbicacion(e.target.value)}>
-          <option value="interior">Interior</option>
-          <option value="exterior">Exterior</option>
-        </select>
-      </div>
-
-      {/* Clima */}
-      <div>
-        <Label>Condiciones climáticas</Label>
-        <textarea value={clima} onChange={(e) => setClima(e.target.value)} />
-      </div>
-
-      {/* Fumigación */}
-      <div>
-        <Label>Registro de fumigación reciente</Label>
-        <select value={fumigacion} onChange={(e) => setFumigacion(e.target.value)}>
-          <option value="si">Sí</option>
-          <option value="no">No</option>
-        </select>
-      </div>
-
-      {/* Estado dispositivo */}
-      <div>
-        <Label>Estado del dispositivo</Label>
-        <textarea value={estadoDispositivo} onChange={(e) => setEstadoDispositivo(e.target.value)} />
-      </div>
-
-      {/* Estado envase */}
-      <div>
-        <Label>Estado del envase</Label>
-        <select value={estadoEnvase} onChange={(e) => setEstadoEnvase(e.target.value)}>
-          <option value="correcto">Correcto</option>
-          <option value="volcado">Volcado</option>
-          <option value="seco">Seco</option>
-          <option value="roto">Roto</option>
-          <option value="faltante">Faltante</option>
-        </select>
       </div>
 
       {/* Especies */}
-      <h3 className="font-semibold">Especies</h3>
+      <h3 className="font-semibold mt-6">Especies</h3>
       <div className="flex gap-4">
         <div>
           <Label>Anopheles</Label>
@@ -208,7 +255,7 @@ export function InformesTrampas({
       </div>
 
       {/* Variables entomológicas */}
-      <h3 className="font-semibold">Variables Entomológicas</h3>
+      <h3 className="font-semibold mt-6">Variables Entomológicas</h3>
       <div className="space-y-2">
         <div>
           <Label>Ovitrap positiva</Label>
@@ -244,14 +291,26 @@ export function InformesTrampas({
         </div>
       </div>
 
-      {/* Botón de guardar */}
-      <div className="pt-4">
+      {/* Botones de acción */}
+      <div className="flex justify-between space-x-2 pt-4">
+        <Button
+          variant="outline"
+          onClick={onClose}
+          disabled={cooldown}
+          className="w-1/2 bg-red-600 text-white hover:bg-red-500 transition duration-200 ease-in-out active:scale-[0.98]"
+        >
+          Cancelar
+        </Button>
         <Button
           onClick={handleGuardar}
           disabled={cooldown}
-          className={`w-full ${cooldown ? 'bg-gray-400' : 'bg-green-900 hover:bg-green-800'} text-white`}
+          className="w-1/2 bg-green-900 text-white hover:bg-green-800 transition duration-200 ease-in-out active:scale-[0.98]"
         >
-          {cooldown ? 'Guardando...' : 'Guardar informe'}
+          {cooldown
+            ? `Reintentar en ${countdown}s`
+            : informeExistente
+              ? 'Actualizar informe'
+              : 'Guardar informe'}
         </Button>
       </div>
     </div>

@@ -8,14 +8,22 @@ export async function GET() {
       include: { informes: true },
       orderBy: { creadoEn: 'asc' },
     })
-    return NextResponse.json({ success: true, trampas })
+
+    // 🔧 Serializamos creadoEn a string ISO
+    const trampasSerializadas = trampas.map((t) => ({
+      ...t,
+      creadoEn: t.creadoEn.toISOString(),
+      numero: t.numero,
+    }))
+
+    return NextResponse.json({ success: true, trampas: trampasSerializadas })
   } catch (error) {
     console.error('❌ Error al leer trampas:', error)
     return NextResponse.json({ error: 'Error al leer trampas' }, { status: 500 })
   }
 }
 
-// ✅ POST: crear una nueva trampa
+// ✅ POST: crear una nueva trampa con número manual
 export async function POST(req: Request) {
   try {
     const body = await req.json()
@@ -23,8 +31,6 @@ export async function POST(req: Request) {
     const lat = body.lat
     const lng = body.lng
     const ubicacion = body.ubicacion?.trim() || null
-    const ovi = typeof body.traps?.ovi === 'boolean' ? body.traps.ovi : undefined
-    const adulto = typeof body.traps?.adulto === 'boolean' ? body.traps.adulto : undefined
 
     if (!address || typeof lat !== 'number' || typeof lng !== 'number') {
       return NextResponse.json({ error: 'Faltan datos válidos' }, { status: 400 })
@@ -35,14 +41,20 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Trampa ya existe en esa dirección' }, { status: 409 })
     }
 
+    // 🔧 Buscar último número asignado
+    const ultima = await prisma.trampa.findMany({
+      orderBy: { numero: 'desc' },
+      take: 1,
+    })
+    const nuevoNumero = ultima.length > 0 ? (ultima[0].numero ?? 0) + 1 : 1
+
     await prisma.trampa.create({
       data: {
         direccion: address,
         lat,
         lng,
         ubicacion,
-        ...(ovi !== undefined ? { ovi } : {}),
-        ...(adulto !== undefined ? { adulto } : {}),
+        numero: nuevoNumero, // 👈 asignamos manualmente
       },
     })
 
@@ -80,8 +92,6 @@ export async function PATCH(req: Request) {
     const nuevaUbicacion = body.nuevaUbicacion?.trim()
     const nuevaLat = body.nuevaLat
     const nuevaLng = body.nuevaLng
-    const nuevoOvi = body.nuevoOvi
-    const nuevoAdulto = body.nuevoAdulto
 
     if (!id) {
       return NextResponse.json({ error: 'Falta id de la trampa' }, { status: 400 })
@@ -98,12 +108,6 @@ export async function PATCH(req: Request) {
     }
     if (nuevaUbicacion) {
       data.ubicacion = nuevaUbicacion
-    }
-    if (typeof nuevoOvi === 'boolean') {
-      data.ovi = nuevoOvi
-    }
-    if (typeof nuevoAdulto === 'boolean') {
-      data.adulto = nuevoAdulto
     }
 
     if (Object.keys(data).length === 0) {

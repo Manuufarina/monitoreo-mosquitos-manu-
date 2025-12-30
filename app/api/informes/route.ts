@@ -26,45 +26,71 @@ export async function GET(req: Request) {
   }
 }
 
-// POST: crear un nuevo informe
+// POST: crear un nuevo informe con número manual
 export async function POST(req: Request) {
   try {
     const body = await req.json()
-    const { trampaId, fecha, tipos, cantidades, notas } = body
+    const {
+      trampaId,
+      fecha,
+      grupo,
+      hora,
+      ronda,
+      operadorId,
+      ubicacion,
+      clima,
+      fumigacion,
+      estadoDispositivo,
+      estadoEnvase,
+      anopheles,
+      aedes,
+      culex,
+      ovitrapPositiva,
+      larvasPupas,
+      emergenciaAdultos,
+      cantidadAdultos,
+    } = body
 
-    if (!trampaId || !fecha || !Array.isArray(tipos) || tipos.length === 0 || !cantidades) {
+    if (!trampaId || !fecha) {
       return NextResponse.json({ error: 'Faltan campos obligatorios' }, { status: 400 })
-    }
-
-    const cleanBlock = (bloque?: Record<string, unknown>) => {
-      const out: Record<string, number> = {}
-      if (bloque && typeof bloque === 'object') {
-        Object.entries(bloque).forEach(([k, v]) => {
-          const n = typeof v === 'number' ? v : Number(v as any)
-          if (!Number.isNaN(n) && n > 0) out[k] = n
-        })
-      }
-      return out
-    }
-
-    const cleanOvi = cleanBlock(cantidades.ovi)
-    const cleanAdultos = cleanBlock(cantidades.adultos)
-
-    if (Object.keys(cleanOvi).length === 0 && Object.keys(cleanAdultos).length === 0) {
-      return NextResponse.json({ error: 'No hay cantidades válidas' }, { status: 400 })
     }
 
     const fechaDia = toDateOnlyUTC(fecha)
 
-    const nuevo = await prisma.informe.create({
-      data: {
-        trampaId,
-        fecha: fechaDia,
-        tipos,
-        cantidades: { ovi: cleanOvi, adultos: cleanAdultos },
-        notas,
-      },
+    // 🔧 Buscar último número asignado
+    const ultimo = await prisma.informe.findMany({
+      orderBy: { numero: 'desc' },
+      take: 1,
     })
+    const nuevoNumero = ultimo.length > 0 ? (ultimo[0].numero ?? 0) + 1 : 1
+
+    // armamos el objeto data dinámicamente
+    const data: any = {
+      trampaId,
+      fecha: fechaDia,
+      grupo,
+      hora,
+      ronda,
+      ubicacion,
+      clima,
+      fumigacion,
+      estadoDispositivo,
+      estadoEnvase,
+      anopheles,
+      aedes,
+      culex,
+      ovitrapPositiva,
+      larvasPupas,
+      emergenciaAdultos,
+      cantidadAdultos,
+      numero: nuevoNumero, // 👈 asignamos manualmente
+    }
+
+    if (operadorId && operadorId.trim() !== '') {
+      data.operadorId = operadorId
+    }
+
+    const nuevo = await prisma.informe.create({ data })
 
     return NextResponse.json({ success: true, informe: nuevo })
   } catch (error: any) {
@@ -83,41 +109,61 @@ export async function POST(req: Request) {
 export async function PUT(req: Request) {
   try {
     const body = await req.json()
-    const { id, trampaId, fecha, tipos, cantidades, notas } = body
+    const {
+      id,
+      trampaId,
+      fecha,
+      grupo,
+      hora,
+      ronda,
+      operadorId,
+      ubicacion,
+      clima,
+      fumigacion,
+      estadoDispositivo,
+      estadoEnvase,
+      anopheles,
+      aedes,
+      culex,
+      ovitrapPositiva,
+      larvasPupas,
+      emergenciaAdultos,
+      cantidadAdultos,
+    } = body
 
-    if (!id || !trampaId || !fecha || !Array.isArray(tipos) || tipos.length === 0) {
+    if (!id || !trampaId || !fecha) {
       return NextResponse.json({ error: 'Faltan campos obligatorios' }, { status: 400 })
-    }
-
-    const cleanBlock = (bloque?: Record<string, unknown>) => {
-      const out: Record<string, number> = {}
-      if (bloque && typeof bloque === 'object') {
-        Object.entries(bloque).forEach(([k, v]) => {
-          const n = typeof v === 'number' ? v : Number(v as any)
-          if (!Number.isNaN(n) && n > 0) out[k] = n
-        })
-      }
-      return out
-    }
-
-    const cleanOvi = cleanBlock(cantidades?.ovi)
-    const cleanAdultos = cleanBlock(cantidades?.adultos)
-
-    if (Object.keys(cleanOvi).length === 0 && Object.keys(cleanAdultos).length === 0) {
-      return NextResponse.json({ error: 'No hay cantidades válidas' }, { status: 400 })
     }
 
     const fechaDia = toDateOnlyUTC(fecha)
 
+    const data: any = {
+      trampaId,
+      fecha: fechaDia,
+      grupo,
+      hora,
+      ronda,
+      ubicacion,
+      clima,
+      fumigacion,
+      estadoDispositivo,
+      estadoEnvase,
+      anopheles,
+      aedes,
+      culex,
+      ovitrapPositiva,
+      larvasPupas,
+      emergenciaAdultos,
+      cantidadAdultos,
+    }
+
+    if (operadorId && operadorId.trim() !== '') {
+      data.operadorId = operadorId
+    }
+
     const actualizado = await prisma.informe.update({
       where: { id },
-      data: {
-        trampaId,
-        fecha: fechaDia,
-        tipos,
-        cantidades: { ovi: cleanOvi, adultos: cleanAdultos },
-        notas,
-      },
+      data,
     })
 
     return NextResponse.json({ success: true, informe: actualizado })

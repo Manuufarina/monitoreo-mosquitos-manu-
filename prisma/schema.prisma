@@ -10,14 +10,13 @@ datasource db {
 model Usuario {
   id             String   @id @default(auto()) @map("_id") @db.ObjectId
   nombre         String
-  email          String?   // 👈 opcional, sin @unique
+  email          String?   // opcional, sin @unique
   password       String
-  creadoEn       DateTime @default(now())
 
   rangoId        String?  @db.ObjectId
   rango          Rango?   @relation(fields: [rangoId], references: [id])
 
-  nombreApellido String?  // 👈 campo opcional para nombre completo de la persona
+  nombreApellido String?  // campo opcional para nombre completo de la persona
 }
 
 model Rango {
@@ -31,25 +30,43 @@ model Rango {
 
 model Trampa {
   id        String    @id @default(auto()) @map("_id") @db.ObjectId
+  numero    Int?
   direccion String
   lat       Float
   lng       Float
-  ubicacion String?   // 👈 campo opcional para descripción de la ubicación
+  ubicacion String?  
   creadoEn  DateTime  @default(now())
 
   informes  Informe[]
 }
 
 model Informe {
-  id         String    @id @default(auto()) @map("_id") @db.ObjectId
-  fecha      DateTime
-  tipos      Json      // guarda ["ovi","adultos"] como JSON
-  cantidades Json      // { ovi: { Culex: 3 }, adultos: { Aedes: 4 } }
-  notas      String?
-  creadoEn   DateTime  @default(now())
+  id                String   @id @default(auto()) @map("_id") @db.ObjectId
+  numero            Int?
+  fecha             DateTime
+  grupo             String
+  hora              String?
+  ronda             String?
+  operadorId        String?  @db.ObjectId
+  ubicacion         String?
+  clima             String?
+  fumigacion        String?
+  estadoDispositivo String?
+  estadoEnvase      String?
 
-  trampaId   String    @db.ObjectId
-  trampa     Trampa    @relation(fields: [trampaId], references: [id])
+  anopheles         String   // "positivo" | "negativo"
+  aedes             String   // "positivo" | "negativo"
+  culex             String   // "positivo" | "negativo"
 
-  @@unique([trampaId, fecha])   // ✅ evita duplicados en la misma dirección y fecha
+  ovitrapPositiva   String   // "si" | "no"
+  larvasPupas       String   // "si" | "no"
+  emergenciaAdultos String   // "si" | "no"
+  cantidadAdultos   Int?
+
+  creadoEn          DateTime @default(now())
+
+  trampaId          String   @db.ObjectId
+  trampa            Trampa   @relation(fields: [trampaId], references: [id])
+
+  @@unique([trampaId, fecha])   // evita duplicados en la misma dirección y fecha
 }

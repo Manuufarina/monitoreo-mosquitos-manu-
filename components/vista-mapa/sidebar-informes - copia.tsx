@@ -21,7 +21,6 @@ interface Informe {
 
 interface SidebarInformesProps {
   trampaId: number
-  numero: number
   direccion: string
   lat: number
   lng: number
@@ -41,12 +40,10 @@ interface SidebarInformesProps {
   setModoEdicionPin: (estado: boolean) => void
   ubicacion?: string
   posicionEditada?: { lat: number; lng: number } | null
-  creadoEn: string // 👈 nueva prop
 }
 
 export function SidebarInformes({
   trampaId,
-  numero,
   direccion,
   lat,
   lng,
@@ -63,7 +60,6 @@ export function SidebarInformes({
   setModoEdicionPin,
   ubicacion = '',
   posicionEditada,
-  creadoEn,
 }: SidebarInformesProps) {
   const [filtroAnio, setFiltroAnio] = useState<string>('')
   const [filtroMes, setFiltroMes] = useState<string>('')
@@ -85,11 +81,9 @@ export function SidebarInformes({
     setEditandoDescripcion(false)
   }, [ubicacion])
 
-  // 👇 ahora traés también actualizarDireccion
-  const { actualizarDescripcion, actualizarPosicion, actualizarDireccion } = useActualizar() || {
+  const { actualizarDescripcion, actualizarPosicion } = useActualizar() || {
     actualizarDescripcion: async () => false,
     actualizarPosicion: async () => false,
-    actualizarDireccion: async () => false,
   }
 
   const añosDisponibles = Array.from(
@@ -128,19 +122,28 @@ export function SidebarInformes({
     setConfirmarPin(false)
   }
 
-  // 👇 ahora usamos actualizarDireccion del provider
   const handleConfirmarDireccion = async () => {
     if (editandoDireccion) {
-      const ok = await actualizarDireccion(trampaId, direccionEditable)
-      if (ok) {
-        alert('✅ Dirección actualizada en la base')
-        setEditandoDireccion(false)
-      } else {
-        alert('❌ No se pudo actualizar la dirección')
+      try {
+        const res = await fetch('/api/trampas', {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            id: trampaId,
+            nuevaDireccion: direccionEditable,
+          }),
+        })
+        if (res.ok) {
+          alert('✅ Dirección actualizada en la base')
+        } else {
+          alert('❌ No se pudo actualizar la dirección')
+        }
+      } catch (err) {
+        console.error('Error al actualizar dirección:', err)
+        alert('❌ Error al conectar con el servidor')
       }
-    } else {
-      setEditandoDireccion(true)
     }
+    setEditandoDireccion(!editandoDireccion)
   }
 
   const handleGuardarDescripcion = async () => {
@@ -168,8 +171,6 @@ export function SidebarInformes({
       alert('❌ No se pudo actualizar la posición')
     }
   }
-
-
 
   return (
     <div className="bg-white rounded-lg shadow-md p-4 space-y-4 relative">
@@ -204,27 +205,16 @@ export function SidebarInformes({
           )}
         </div>
 
-			{editandoDireccion ? (
-			  <input
-				type="text"
-				value={direccionEditable}
-				onChange={(e) => setDireccionEditable(e.target.value)}
-				className="text-sm border rounded px-2 py-1 w-full"
-			  />
-			) : (
-			  <>
-				<p className="text-sm font-medium">
-				  N°{numero} - {direccionEditable?.toUpperCase()}
-				</p>
-				<p className="text-xs text-gray-500">
-				  {creadoEn && !isNaN(Date.parse(creadoEn))
-					? new Date(creadoEn).toLocaleDateString('es-AR')
-					: '—'}
-				</p>
-			  </>
-			)}
-
-
+        {editandoDireccion ? (
+          <input
+            type="text"
+            value={direccionEditable}
+            onChange={(e) => setDireccionEditable(e.target.value)}
+            className="text-sm border rounded px-2 py-1 w-full"
+          />
+        ) : (
+          <p className="text-sm text-muted-foreground">{direccionEditable?.toUpperCase()}</p>
+        )}
 
         <Button
           variant="outline"

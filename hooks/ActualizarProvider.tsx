@@ -31,6 +31,7 @@ interface ActualizarContextType {
   eliminarPin: (direccion: string) => Promise<boolean>
   actualizarPosicion: (trampaId: string, nuevaLat: number, nuevaLng: number) => Promise<boolean>
   actualizarDescripcion: (trampaId: string, nuevaUbicacion: string) => Promise<boolean>
+  actualizarDireccion: (trampaId: string, nuevaDireccion: string) => Promise<boolean>   // 👈 agregado
   selectedTrampa: any | null
   setSelectedTrampa: (trampa: any | null) => void
 }
@@ -50,7 +51,7 @@ export function ActualizarProvider({ children }: { children: React.ReactNode }) 
 
       setTrampas(
         trampasRaw.map((t: any) => ({
-          id: t.id, // 👈 mantener como string
+          id: t.id,
           location: {
             address: t.direccion,
             lat: Number(t.lat),
@@ -58,6 +59,9 @@ export function ActualizarProvider({ children }: { children: React.ReactNode }) 
           },
           ubicacion: t.ubicacion ?? "",
           traps: { ovi: t.ovi ?? false, adulto: t.adulto ?? false },
+          creadoEn: typeof t.creadoEn === 'string'
+            ? t.creadoEn
+            : new Date(t.creadoEn).toISOString(),
         }))
       )
     } catch (err) {
@@ -224,6 +228,33 @@ export function ActualizarProvider({ children }: { children: React.ReactNode }) 
     return false
   }
 
+  const actualizarDireccion = async (
+    trampaId: string,
+    nuevaDireccion: string
+  ): Promise<boolean> => {
+    try {
+      const res = await fetch('/api/trampas', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: trampaId, nuevaDireccion }),
+      })
+      const result = await res.json()
+      if (result.success) {
+        setTrampas((prev) =>
+          prev.map((t) =>
+            t.id === trampaId
+              ? { ...t, location: { ...t.location, address: nuevaDireccion } }
+              : t
+          )
+        )
+        return true
+      }
+    } catch (err) {
+      console.error('❌ Error al actualizar dirección:', err)
+    }
+    return false
+  }
+
   return (
     <ActualizarContext.Provider
       value={{
@@ -237,6 +268,7 @@ export function ActualizarProvider({ children }: { children: React.ReactNode }) 
         eliminarPin,
         actualizarPosicion,
         actualizarDescripcion,
+        actualizarDireccion,   // 👈 agregado
         selectedTrampa,
         setSelectedTrampa,
       }}
