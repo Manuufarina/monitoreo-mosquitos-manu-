@@ -1,7 +1,6 @@
 import { NextResponse } from 'next/server'
-import { PrismaClient } from '@prisma/client'
-
-const prisma = new PrismaClient()
+import { prisma } from '@/lib/prisma'
+import bcrypt from 'bcryptjs'
 
 // 📍 Crear usuario
 export async function POST(req: Request) {
@@ -36,12 +35,15 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Rango no existe' }, { status: 400 })
     }
 
+    // Hashear contraseña antes de guardar
+    const passwordHasheada = await bcrypt.hash(password.trim(), 10)
+
     // Crear usuario con referencia al rango
     const nuevo = await prisma.usuario.create({
       data: {
         nombre,
         email: isEmail ? usuario.trim() : "sin-correo", // 👈 nunca null
-        password: password.trim(),
+        password: passwordHasheada,
         rangoId: rango.id,
         nombreApellido: nombreApellido?.trim() ?? null,
       },
@@ -96,12 +98,27 @@ export async function PATCH(req: Request) {
   try {
     const { id, nombre, email, password, rangoId, quitarRango, nombreApellido } = await req.json()
 
-    const data: any = { 
-      nombre, 
+    // Tipado correcto para los datos a actualizar
+    const data: {
+      nombre?: string
+      email?: string
+      password?: string
+      rangoId?: string | null
+      nombreApellido?: string | null
+    } = {
+      nombre,
       email: email?.trim() || "sin-correo", // 👈 nunca null
-      password, 
-      rangoId, 
-      nombreApellido 
+      nombreApellido
+    }
+
+    // Si se proporciona password, hashearla antes de guardar
+    if (password && password.trim() !== '') {
+      data.password = await bcrypt.hash(password.trim(), 10)
+    }
+
+    // Si se proporciona rangoId, asignarlo
+    if (rangoId !== undefined) {
+      data.rangoId = rangoId
     }
 
     // Si se pide quitar rango, lo dejamos en null

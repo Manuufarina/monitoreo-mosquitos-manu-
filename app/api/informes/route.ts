@@ -65,10 +65,31 @@ export async function POST(req: Request) {
     })
     const nuevoNumeroInforme = ultimo.length > 0 ? (ultimo[0].numeroInforme ?? 0) + 1 : 1
 
-    // armamos el objeto data dinámicamente
-    const data: any = {
+    // Tipado correcto para los datos del informe
+    const data: {
+      trampaId: string
+      numeroTrampa: number
+      fecha: Date
+      grupo: string
+      hora?: string
+      ronda?: string
+      operadorId?: string
+      ubicacion?: string
+      clima?: string
+      fumigacion?: string
+      estadoDispositivo?: string
+      estadoEnvase?: string
+      anopheles: string
+      aedes: string
+      culex: string
+      ovitrapPositiva: string
+      larvasPupas: string
+      emergenciaAdultos: string
+      cantidadAdultos?: number
+      numeroInforme: number
+    } = {
       trampaId,
-      trampaNumero,
+      numeroTrampa: trampaNumero,
       fecha: fechaDia,
       grupo,
       hora,
@@ -85,7 +106,7 @@ export async function POST(req: Request) {
       larvasPupas,
       emergenciaAdultos,
       cantidadAdultos,
-      numeroInforme: nuevoNumeroInforme, // 👈 asignamos manualmente
+      numeroInforme: nuevoNumeroInforme,
     }
 
     if (operadorId && operadorId.trim() !== '') {
@@ -95,8 +116,8 @@ export async function POST(req: Request) {
     const nuevo = await prisma.informe.create({ data })
 
     return NextResponse.json({ success: true, informe: nuevo })
-  } catch (error: any) {
-    if (error.code === 'P2002') {
+  } catch (error: unknown) {
+    if (error && typeof error === 'object' && 'code' in error && error.code === 'P2002') {
       return NextResponse.json(
         { error: 'Ya existe un informe para esa trampa en esa fecha.' },
         { status: 400 }
@@ -140,9 +161,30 @@ export async function PUT(req: Request) {
 
     const fechaDia = toDateOnlyUTC(fecha)
 
-    const data: any = {
+    // Tipado correcto para los datos del informe
+    const data: {
+      trampaId: string
+      numeroTrampa: number
+      fecha: Date
+      grupo: string
+      hora?: string
+      ronda?: string
+      operadorId?: string
+      ubicacion?: string
+      clima?: string
+      fumigacion?: string
+      estadoDispositivo?: string
+      estadoEnvase?: string
+      anopheles: string
+      aedes: string
+      culex: string
+      ovitrapPositiva: string
+      larvasPupas: string
+      emergenciaAdultos: string
+      cantidadAdultos?: number
+    } = {
       trampaId,
-      trampaNumero,
+      numeroTrampa: trampaNumero,
       fecha: fechaDia,
       grupo,
       hora,
@@ -171,8 +213,8 @@ export async function PUT(req: Request) {
     })
 
     return NextResponse.json({ success: true, informe: actualizado })
-  } catch (error: any) {
-    if (error.code === 'P2002') {
+  } catch (error: unknown) {
+    if (error && typeof error === 'object' && 'code' in error && error.code === 'P2002') {
       return NextResponse.json(
         { error: 'Ya existe otro informe con esa fecha en esta trampa.' },
         { status: 400 }

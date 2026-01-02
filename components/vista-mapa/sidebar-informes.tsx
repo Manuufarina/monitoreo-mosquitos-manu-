@@ -8,8 +8,10 @@ import { ConfirmacionModal } from '@/components/ui/ConfirmacionModal'
 import { useActualizar } from '@/hooks/useActualizar'
 
 interface Informe {
-  id?: number
-  trampaId: number
+  id?: string
+  trampaId: string
+  numeroTrampa?: number
+  numeroInforme?: number
   fecha: string
   tipos: ('ovi' | 'adultos')[]
   cantidades?: {
@@ -20,7 +22,7 @@ interface Informe {
 }
 
 interface SidebarInformesProps {
-  trampaId: number
+  trampaId: string
   numero: number
   direccion: string
   lat: number
@@ -34,7 +36,7 @@ interface SidebarInformesProps {
   informes: Informe[]
   onAgregarNuevo: () => void
   onEditarInforme: (informe: Informe) => void
-  onEliminarInforme: (id: number) => void
+  onEliminarInforme: (id: string) => void
   onEliminarPin: (direccion: string) => Promise<void> | void
   onCerrar: () => void   // 👈 cambiamos la prop: antes era onMinimizar
   modoEdicionPin: boolean

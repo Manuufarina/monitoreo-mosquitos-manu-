@@ -4,19 +4,43 @@ import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
 
+interface InformeExistente {
+  id?: string
+  trampaId: string
+  numeroTrampa?: number
+  numeroInforme?: number
+  fecha?: string
+  grupo?: string
+  hora?: string
+  ronda?: string
+  operadorId?: string
+  ubicacion?: string
+  clima?: string
+  fumigacion?: string
+  estadoDispositivo?: string
+  estadoEnvase?: string
+  anopheles?: string
+  aedes?: string
+  culex?: string
+  ovitrapPositiva?: string
+  larvasPupas?: string
+  emergenciaAdultos?: string
+  cantidadAdultos?: number
+}
+
 interface InformeTrampaProps {
   trampaId: string
-  numero: number
-  informesExistentes: any[]
-  informeExistente?: any | null
-  onGuardado: (payload: any) => void
+  numeroZona: number
+  informesExistentes: InformeExistente[]
+  informeExistente?: InformeExistente | null
+  onGuardado: (payload: InformeExistente) => void
   operadores: { id: string; nombre: string; nombreApellido?: string }[]
   onClose?: () => void
 }
 
 export function InformesTrampas({
   trampaId,
-  numero,
+  numeroZona,
   informesExistentes,
   informeExistente,
   onGuardado,
@@ -69,52 +93,24 @@ export function InformesTrampas({
       })
     }, 1000)
   }
-// 👉 Crear trampa en backend y actualizar lista local
-const handleAgregarTrampa = async () => {
+// 👉 Validar número de trampa ingresado
+const handleValidarTrampa = () => {
   if (!trampaNumeroSeleccionado) {
     setErrorTrampa('Debe ingresar un número de trampa')
-    return
+    return false
   }
 
+  // Verificar si ya existe un informe con ese número de trampa en esta zona
   const existe = informesExistentes.some(
-    (inf) => inf.trampaNumero === trampaNumeroSeleccionado
+    (inf) => inf.numeroTrampa === trampaNumeroSeleccionado && inf.id !== informeExistente?.id
   )
   if (existe) {
-    setErrorTrampa('Ese número de trampa ya existe')
-    return
+    setErrorTrampa('Ya existe un informe con ese número de trampa en esta zona')
+    return false
   }
 
   setErrorTrampa('')
-
-  try {
-    const res = await fetch('/api/trampas', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-body: JSON.stringify({
-  direccion,       
-  lat,             
-  lng,             
-  ubicacion,
-  numeroTrampa: trampaNumeroSeleccionado,
-}),
-
-    })
-
-    const data = await res.json()
-
-    if (res.ok) {
-      alert(`✅ Trampa ${trampaNumeroSeleccionado} creada`)
-
-      // 🔄 Actualizar lista local con la trampa devuelta por el backend
-      if (data.trampa) {
-        setTrampas((prev) => [...prev, data.trampa])
-      }
-    } else {
-      setErrorTrampa(data.error || 'Error al crear trampa')
-    }
-  } catch (err) {
-    setErrorTrampa('No se pudo conectar con el servidor')
-  }
+  return true
 }
 
 
@@ -122,10 +118,13 @@ body: JSON.stringify({
   const handleGuardar = async () => {
     if (cooldown) return
 
+    // Validar número de trampa
+    if (!handleValidarTrampa()) return
+
     const yaExiste = informesExistentes.some(
       (inf) =>
         inf.trampaId === trampaId &&
-        inf.fecha.split('T')[0] === fecha &&
+        inf.fecha?.split('T')[0] === fecha &&
         inf.id !== informeExistente?.id
     )
     if (yaExiste) {
@@ -179,48 +178,58 @@ body: JSON.stringify({
 
   return (
     <div className="space-y-6 p-4 bg-white rounded-lg shadow-md">
-      {/* Encabezado */}
-      <div className="grid grid-cols-3 items-center mb-4">
-        <h2 className="text-lg font-bold text-green-700">
+      {/* Encabezado con 3 IDs */}
+      <div className="mb-4">
+        <h2 className="text-lg font-bold text-green-700 mb-2">
           Informe de Trampa
         </h2>
-        <span className="font-extrabold text-right">
-          N°{numero}
-        </span>
+        <div className="grid grid-cols-3 gap-2 text-sm bg-gray-50 p-2 rounded">
+          <div className="text-center">
+            <span className="text-gray-500 block">N° Zona</span>
+            <span className="font-bold text-green-700">{numeroZona}</span>
+          </div>
+          <div className="text-center">
+            <span className="text-gray-500 block">N° Trampa</span>
+            <span className="font-bold text-blue-700">
+              {trampaNumeroSeleccionado || '—'}
+            </span>
+          </div>
+          <div className="text-center">
+            <span className="text-gray-500 block">N° Informe</span>
+            <span className="font-bold text-purple-700">
+              {informeExistente?.numeroInforme ?? 'Nuevo'}
+            </span>
+          </div>
+        </div>
       </div>
 
-      {/* Campo N° de trampa */}
+      {/* Campo N° de trampa (asignado por operador) */}
       <div className="mt-2">
-        <Label>N° de trampa</Label>
-        <div className="flex items-center gap-2 mb-2">
-          <select
-            value={trampaNumeroSeleccionado || ''}
-            onChange={(e) => setTrampaNumeroSeleccionado(Number(e.target.value))}
-            className="border rounded px-2 py-1 text-sm"
-          >
-            <option value="">Seleccione...</option>
-            {informesExistentes.map((inf) => (
-              <option key={inf.id} value={inf.trampaNumero}>
-                {inf.trampaNumero}
-              </option>
-            ))}
-          </select>
-        </div>
+        <Label>N° de trampa (asignar manualmente)</Label>
         <div className="flex items-center gap-2">
+          {/* Selector de números existentes */}
+          {informesExistentes.some(inf => inf.numeroTrampa) && (
+            <select
+              value={trampaNumeroSeleccionado || ''}
+              onChange={(e) => setTrampaNumeroSeleccionado(e.target.value ? Number(e.target.value) : '')}
+              className="border rounded px-2 py-1 text-sm"
+            >
+              <option value="">Existentes...</option>
+              {[...new Set(informesExistentes.map(inf => inf.numeroTrampa).filter(Boolean))].map((num) => (
+                <option key={num} value={num}>
+                  {num}
+                </option>
+              ))}
+            </select>
+          )}
+          {/* Campo de entrada para nuevo número */}
           <input
             type="number"
             value={trampaNumeroSeleccionado || ''}
-            onChange={(e) => setTrampaNumeroSeleccionado(Number(e.target.value))}
-            placeholder="Ingrese número nuevo"
+            onChange={(e) => setTrampaNumeroSeleccionado(e.target.value ? Number(e.target.value) : '')}
+            placeholder="Ingrese número"
             className="border rounded px-2 py-1 text-sm w-32"
           />
-          <Button
-            type="button"
-            className="bg-green-600 text-white px-2 py-1 rounded"
-            onClick={handleAgregarTrampa}
-          >
-            Agregar
-          </Button>
         </div>
         {errorTrampa && (
           <p className="text-xs text-red-600 mt-1">{errorTrampa}</p>
