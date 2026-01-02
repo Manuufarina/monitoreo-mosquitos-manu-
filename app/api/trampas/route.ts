@@ -9,11 +9,11 @@ export async function GET() {
       orderBy: { creadoEn: 'asc' },
     })
 
-    // 🔧 Serializamos creadoEn a string ISO
     const trampasSerializadas = trampas.map((t) => ({
       ...t,
       creadoEn: t.creadoEn.toISOString(),
-      numero: t.numero,
+      numeroZona: t.numeroZona,
+      numeroTrampa: t.numeroTrampa,
     }))
 
     return NextResponse.json({ success: true, trampas: trampasSerializadas })
@@ -23,42 +23,60 @@ export async function GET() {
   }
 }
 
-// ✅ POST: crear una nueva trampa con número manual
+// ✅ POST: crear una nueva trampa con númeroZona incremental y númeroTrampa manual o autogenerado
 export async function POST(req: Request) {
   try {
     const body = await req.json()
     const address = body.direccion?.trim().toLowerCase()
-    const lat = body.lat
-    const lng = body.lng
+    const lat = Number(body.lat)
+    const lng = Number(body.lng)
     const ubicacion = body.ubicacion?.trim() || null
+    let numeroTrampa = body.numeroTrampa ? Number(body.numeroTrampa) : null
 
-    if (!address || typeof lat !== 'number' || typeof lng !== 'number') {
+    if (!address || isNaN(lat) || isNaN(lng)) {
       return NextResponse.json({ error: 'Faltan datos válidos' }, { status: 400 })
     }
 
-    const existente = await prisma.trampa.findFirst({ where: { direccion: address } })
-    if (existente) {
-      return NextResponse.json({ error: 'Trampa ya existe en esa dirección' }, { status: 409 })
+    // 🔧 Si no viene numeroTrampa, lo generamos incremental
+    if (!numeroTrampa) {
+      const ultimaTrampa = await prisma.trampa.findMany({
+        orderBy: { numeroTrampa: 'desc' },
+        take: 1,
+      })
+      numeroTrampa = ultimaTrampa.length > 0 ? (ultimaTrampa[0].numeroTrampa ?? 0) + 1 : 1
     }
 
-    // 🔧 Buscar último número asignado
-    const ultima = await prisma.trampa.findMany({
-      orderBy: { numero: 'desc' },
+    // Validar que no exista otra trampa con el mismo numeroTrampa
+    const existenteTrampa = await prisma.trampa.findFirst({ where: { numeroTrampa } })
+    if (existenteTrampa) {
+      return NextResponse.json({ error: 'Ese número de trampa ya existe' }, { status: 409 })
+    }
+
+    // 🔧 Buscar último númeroZona asignado
+    const ultimaZona = await prisma.trampa.findMany({
+      orderBy: { numeroZona: 'desc' },
       take: 1,
     })
-    const nuevoNumero = ultima.length > 0 ? (ultima[0].numero ?? 0) + 1 : 1
+    const nuevoNumeroZona = ultimaZona.length > 0 ? (ultimaZona[0].numeroZona ?? 0) + 1 : 1
 
-    await prisma.trampa.create({
+    const nuevaTrampa = await prisma.trampa.create({
       data: {
         direccion: address,
         lat,
         lng,
         ubicacion,
-        numero: nuevoNumero, // 👈 asignamos manualmente
+        numeroZona: nuevoNumeroZona,
+        numeroTrampa,
       },
     })
 
-    return NextResponse.json({ success: true })
+    return NextResponse.json({
+      success: true,
+      trampa: {
+        ...nuevaTrampa,
+        creadoEn: nuevaTrampa.creadoEn.toISOString(),
+      },
+    })
   } catch (error) {
     console.error('❌ Error al crear trampa:', error)
     return NextResponse.json({ error: 'Cuerpo inválido' }, { status: 400 })

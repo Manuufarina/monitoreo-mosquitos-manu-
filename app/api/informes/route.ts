@@ -26,12 +26,13 @@ export async function GET(req: Request) {
   }
 }
 
-// POST: crear un nuevo informe con número manual
+// POST: crear un nuevo informe con número incremental y trampaNumero manual
 export async function POST(req: Request) {
   try {
     const body = await req.json()
     const {
-      trampaId,
+      trampaId,        // ObjectId de la zona/pin
+      trampaNumero,    // número manual único de la trampa
       fecha,
       grupo,
       hora,
@@ -51,22 +52,23 @@ export async function POST(req: Request) {
       cantidadAdultos,
     } = body
 
-    if (!trampaId || !fecha) {
+    if (!trampaId || !trampaNumero || !fecha) {
       return NextResponse.json({ error: 'Faltan campos obligatorios' }, { status: 400 })
     }
 
     const fechaDia = toDateOnlyUTC(fecha)
 
-    // 🔧 Buscar último número asignado
+    // 🔧 Buscar último número de informe
     const ultimo = await prisma.informe.findMany({
-      orderBy: { numero: 'desc' },
+      orderBy: { numeroInforme: 'desc' },
       take: 1,
     })
-    const nuevoNumero = ultimo.length > 0 ? (ultimo[0].numero ?? 0) + 1 : 1
+    const nuevoNumeroInforme = ultimo.length > 0 ? (ultimo[0].numeroInforme ?? 0) + 1 : 1
 
     // armamos el objeto data dinámicamente
     const data: any = {
       trampaId,
+      trampaNumero,
       fecha: fechaDia,
       grupo,
       hora,
@@ -83,7 +85,7 @@ export async function POST(req: Request) {
       larvasPupas,
       emergenciaAdultos,
       cantidadAdultos,
-      numero: nuevoNumero, // 👈 asignamos manualmente
+      numeroInforme: nuevoNumeroInforme, // 👈 asignamos manualmente
     }
 
     if (operadorId && operadorId.trim() !== '') {
@@ -112,6 +114,7 @@ export async function PUT(req: Request) {
     const {
       id,
       trampaId,
+      trampaNumero,
       fecha,
       grupo,
       hora,
@@ -131,7 +134,7 @@ export async function PUT(req: Request) {
       cantidadAdultos,
     } = body
 
-    if (!id || !trampaId || !fecha) {
+    if (!id || !trampaId || !trampaNumero || !fecha) {
       return NextResponse.json({ error: 'Faltan campos obligatorios' }, { status: 400 })
     }
 
@@ -139,6 +142,7 @@ export async function PUT(req: Request) {
 
     const data: any = {
       trampaId,
+      trampaNumero,
       fecha: fechaDia,
       grupo,
       hora,

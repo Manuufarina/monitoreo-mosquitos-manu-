@@ -69,54 +69,52 @@ export function InformesTrampas({
       })
     }, 1000)
   }
-// 👉 Crear trampa en backend y actualizar lista local
-const handleAgregarTrampa = async () => {
-  if (!trampaNumeroSeleccionado) {
-    setErrorTrampa('Debe ingresar un número de trampa')
-    return
-  }
 
-  const existe = informesExistentes.some(
-    (inf) => inf.trampaNumero === trampaNumeroSeleccionado
-  )
-  if (existe) {
-    setErrorTrampa('Ese número de trampa ya existe')
-    return
-  }
-
-  setErrorTrampa('')
-
-  try {
-    const res = await fetch('/api/trampas', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-body: JSON.stringify({
-  direccion,       
-  lat,             
-  lng,             
-  ubicacion,
-  numeroTrampa: trampaNumeroSeleccionado,
-}),
-
-    })
-
-    const data = await res.json()
-
-    if (res.ok) {
-      alert(`✅ Trampa ${trampaNumeroSeleccionado} creada`)
-
-      // 🔄 Actualizar lista local con la trampa devuelta por el backend
-      if (data.trampa) {
-        setTrampas((prev) => [...prev, data.trampa])
-      }
-    } else {
-      setErrorTrampa(data.error || 'Error al crear trampa')
+  // 👉 Crear trampa en backend
+  const handleAgregarTrampa = async () => {
+    if (!trampaNumeroSeleccionado) {
+      setErrorTrampa('Debe ingresar un número de trampa')
+      return
     }
-  } catch (err) {
-    setErrorTrampa('No se pudo conectar con el servidor')
-  }
-}
 
+    const existe = informesExistentes.some(
+      (inf) => inf.trampaNumero === trampaNumeroSeleccionado
+    )
+    if (existe) {
+      setErrorTrampa('Ese número de trampa ya existe')
+      return
+    }
+
+    setErrorTrampa('')
+
+    try {
+      const res = await fetch('/api/trampas', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          direccion: 'sin-direccion', // ⚠️ reemplazar con la dirección real del pin
+          lat: -34.472,               // ⚠️ coordenadas reales del pin
+          lng: -58.522,
+          ubicacion: 'interior',
+          numeroTrampa: trampaNumeroSeleccionado,
+        }),
+      })
+
+      const data = await res.json()
+
+      if (res.ok) {
+        alert(`✅ Trampa ${trampaNumeroSeleccionado} creada`)
+        informesExistentes.push({
+          id: data.id || Date.now(),
+          trampaNumero: trampaNumeroSeleccionado,
+        })
+      } else {
+        setErrorTrampa(data.error || 'Error al crear trampa')
+      }
+    } catch (err) {
+      setErrorTrampa('No se pudo conectar con el servidor')
+    }
+  }
 
   // 👉 Guardar informe
   const handleGuardar = async () => {
@@ -226,6 +224,7 @@ body: JSON.stringify({
           <p className="text-xs text-red-600 mt-1">{errorTrampa}</p>
         )}
       </div>
+
       {/* Dos columnas */}
       <div className="grid grid-cols-2 gap-6">
         {/* Columna izquierda */}

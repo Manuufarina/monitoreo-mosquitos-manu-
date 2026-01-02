@@ -29,20 +29,21 @@ model Rango {
 }
 
 model Trampa {
-  id        String    @id @default(auto()) @map("_id") @db.ObjectId
-  numero    Int?
-  direccion String
-  lat       Float
-  lng       Float
-  ubicacion String?  
-  creadoEn  DateTime  @default(now())
+  id          String    @id @default(auto()) @map("_id") @db.ObjectId
+  numeroZona  Int?                       // ✅ solo numeroZona
+  direccion   String
+  lat         Float
+  lng         Float
+  ubicacion   String?  
+  creadoEn    DateTime  @default(now())
 
-  informes  Informe[]
+  informes    Informe[]
 }
 
 model Informe {
   id                String   @id @default(auto()) @map("_id") @db.ObjectId
-  numero            Int?
+  numeroInforme     Int?                      // ✅ agregado aquí
+  numeroTrampa      Int?                      // ✅ agregado aquí
   fecha             DateTime
   grupo             String
   hora              String?
@@ -65,8 +66,8 @@ model Informe {
 
   creadoEn          DateTime @default(now())
 
-  trampaId          String   @db.ObjectId
+  trampaId          String   @db.ObjectId   // referencia al pin/zona
   trampa            Trampa   @relation(fields: [trampaId], references: [id])
 
-  @@unique([trampaId, fecha])   // evita duplicados en la misma dirección y fecha
+  @@unique([trampaId, fecha])   // evita duplicados en la misma zona y fecha
 }
