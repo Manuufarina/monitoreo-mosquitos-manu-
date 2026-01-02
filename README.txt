@@ -281,4 +281,6 @@ Me dediqué a revisar la interacción entre el botón de reverse geocode y el Si
 Descubrí que al activar el modo pin azul se seguía usando la última selectedLocation, lo que generaba confusión.
 Ajusté la lógica para que al pasar a modo pin se cierre el sidebar y se limpie la selección, evitando que me pregunte por trampas ya existentes. 
 Ahora el flujo de crear nuevas trampas quedó más ordenado.
-
+----------------------------------------------------------------------------------------------------------------
+Día 2/1
+Se esta intentando colocar 3 ids numeroZona, numeroTrampa, numeroInforme; hay error nuevo con lat y long en trampas
