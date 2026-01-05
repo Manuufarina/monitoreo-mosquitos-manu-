@@ -47,7 +47,7 @@ export default function VistaComplementos({
         <Rangos onClose={() => setMenuActivo(null)} />
       )}
 
-      <CambiarPassword />
+      <CambiarPassword usuario={usuario} />
       <CorreoUsuario isLoggedIn={isLoggedIn} usuario={usuario} />
     </div>
   )
