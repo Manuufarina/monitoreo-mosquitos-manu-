@@ -7,9 +7,8 @@ import { Label } from '@/components/ui/label'
 import { Card } from '@/components/ui/card'
 import { Lock } from 'lucide-react'
 
-export default function CambiarPassword() {
+export default function CambiarPassword({ usuario }: { usuario: string }) {
   const [editando, setEditando] = useState(false)
-  const [usuario, setUsuario] = useState('')
   const [passwordActual, setPasswordActual] = useState('')
   const [passwordNueva, setPasswordNueva] = useState('')
   const [mensaje, setMensaje] = useState('')
@@ -35,7 +34,6 @@ export default function CambiarPassword() {
       if (result.success) {
         setMensaje('✅ Contraseña actualizada correctamente.')
         setEditando(false)
-        setUsuario('')
         setPasswordActual('')
         setPasswordNueva('')
       } else {
@@ -54,11 +52,7 @@ export default function CambiarPassword() {
       {editando ? (
         <div className="space-y-2">
           <Label>Usuario</Label>
-          <Input
-            placeholder="Nombre de usuario"
-            value={usuario}
-            onChange={(e) => setUsuario(e.target.value)}
-          />
+          <Input value={usuario} readOnly />
 
           <Label>Contraseña actual</Label>
           <Input
